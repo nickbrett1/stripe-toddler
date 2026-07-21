@@ -1,4 +1,7 @@
 import Foundation
+import DeviceCheck
+import CryptoKit
+import UIKit
 
 // MARK: - Backend API Client Protocol
 public protocol BackendAPIClientProtocol: AnyObject {
@@ -31,6 +34,17 @@ public enum BackendAPIError: LocalizedError {
 public final class BackendAPIClient: BackendAPIClientProtocol {
     private let baseURL: URL
     private let session: URLSession
+    private let attestService = DCAppAttestService.shared
+    
+    // Store keyId in UserDefaults (Keychain is preferred in production, UserDefaults for simplicity)
+    private var appAttestKeyId: String? {
+        get { UserDefaults.standard.string(forKey: "appAttestKeyId") }
+        set { UserDefaults.standard.set(newValue, forKey: "appAttestKeyId") }
+    }
+    
+    private var deviceId: String {
+        UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+    }
     
     public init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
@@ -50,17 +64,133 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         return encoder
     }
     
+    // MARK: - Apple App Attest Integration (Step 4.6)
     public func registerDeviceWithAppAttest() async throws {
-        // App Attest registration stub for development / simulation
-        // In physical builds, Apple App Attest challenge-response verification is run here
-        try await Task.sleep(nanoseconds: 500_000_000)
+        guard attestService.isSupported else {
+            // App Attest is not supported on Simulators. Fall back to placeholder mode.
+            return
+        }
+        
+        let keyId: String
+        if let existingKey = appAttestKeyId {
+            keyId = existingKey
+        } else {
+            keyId = try await withCheckedThrowingContinuation { continuation in
+                attestService.generateKey { keyId, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let keyId = keyId {
+                        continuation.resume(returning: keyId)
+                    } else {
+                        continuation.resume(throwing: BackendAPIError.missingData)
+                    }
+                }
+            }
+            appAttestKeyId = keyId
+        }
+        
+        // 1. Fetch challenge from backend
+        let challenge = try await fetchChallenge()
+        
+        // 2. Hash the challenge clientDataHash
+        let challengeData = challenge.data(using: .utf8)!
+        let hash = Data(SHA256.hash(data: challengeData))
+        
+        // 3. Attest the generated keyId
+        let attestation = try await withCheckedThrowingContinuation { continuation in
+            attestService.attestKey(keyId, clientDataHash: hash) { attestation, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else if let attestation = attestation {
+                    continuation.resume(returning: attestation)
+                } else {
+                    continuation.resume(throwing: BackendAPIError.missingData)
+                }
+            }
+        }
+        
+        // 4. Send attestation verification request to backend
+        try await verifyAttestation(keyId: keyId, attestation: attestation, challenge: challenge)
     }
     
+    private func fetchChallenge() async throws -> String {
+        let url = baseURL.appendingPathComponent("api/attest/challenge")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw BackendAPIError.badResponse(statusCode: 200)
+        }
+        
+        struct ChallengeResponse: Decodable {
+            let challenge: String
+        }
+        let result = try JSONDecoder().decode(ChallengeResponse.self, from: data)
+        return result.challenge
+    }
+    
+    private func verifyAttestation(keyId: String, attestation: Data, challenge: String) async throws {
+        let url = baseURL.appendingPathComponent("api/attest/verify")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        struct VerifyPayload: Encodable {
+            let deviceId: String
+            let keyId: String
+            let attestationObject: String
+            let challenge: String
+        }
+        
+        let payload = VerifyPayload(
+            deviceId: deviceId,
+            keyId: keyId,
+            attestationObject: attestation.base64EncodedString(),
+            challenge: challenge
+        )
+        request.httpBody = try jsonEncoder.encode(payload)
+        
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw BackendAPIError.badResponse(statusCode: 200)
+        }
+    }
+    
+    // Generates a base64 encoded client assertion payload (Step 4.6.6)
+    private func generateAssertionHeader(for clientData: Data) async -> String {
+        guard attestService.isSupported, let keyId = appAttestKeyId else {
+            return "placeholder-attest-token"
+        }
+        
+        let clientDataHash = Data(SHA256.hash(data: clientData))
+        do {
+            let assertion = try await withCheckedThrowingContinuation { continuation in
+                attestService.generateAssertion(keyId, clientDataHash: clientDataHash) { assertion, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else if let assertion = assertion {
+                        continuation.resume(returning: assertion)
+                    } else {
+                        continuation.resume(throwing: BackendAPIError.missingData)
+                    }
+                }
+            }
+            return assertion.base64EncodedString()
+        } catch {
+            return "placeholder-attest-token"
+        }
+    }
+    
+    // MARK: - POS Operations
     public func fetchItem(barcode: String) async throws -> POSInventoryItem {
         let url = baseURL.appendingPathComponent("api/pos/inventory/\(barcode)")
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("placeholder-attest-token", forHTTPHeaderField: "X-App-Attest-Assertion")
+        
+        let barcodeData = barcode.data(using: .utf8)!
+        let assertion = await generateAssertionHeader(for: barcodeData)
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
         
         let (data, response) = try await session.data(for: request)
         
@@ -79,7 +209,10 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         let url = baseURL.appendingPathComponent("api/terminal/connection-token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("placeholder-attest-token", forHTTPHeaderField: "X-App-Attest-Assertion")
+        
+        // Empty payload hash for connection token requests
+        let assertion = await generateAssertionHeader(for: Data())
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
         
         let (data, response) = try await session.data(for: request)
         
@@ -103,7 +236,6 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("placeholder-attest-token", forHTTPHeaderField: "X-App-Attest-Assertion")
         
         struct RequestBody: Encodable {
             let amountCents: Int
@@ -111,7 +243,11 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         }
         
         let body = RequestBody(amountCents: amountCents, barcodes: barcodes)
-        request.httpBody = try jsonEncoder.encode(body)
+        let bodyData = try jsonEncoder.encode(body)
+        request.httpBody = bodyData
+        
+        let assertion = await generateAssertionHeader(for: bodyData)
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
         
         let (data, response) = try await session.data(for: request)
         
@@ -131,7 +267,6 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("placeholder-attest-token", forHTTPHeaderField: "X-App-Attest-Assertion")
         
         struct RequestBody: Encodable {
             let paymentIntentId: String
@@ -140,7 +275,11 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         }
         
         let body = RequestBody(paymentIntentId: paymentIntentId, totalCents: totalCents, items: items)
-        request.httpBody = try jsonEncoder.encode(body)
+        let bodyData = try jsonEncoder.encode(body)
+        request.httpBody = bodyData
+        
+        let assertion = await generateAssertionHeader(for: bodyData)
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
         
         let (data, response) = try await session.data(for: request)
         
