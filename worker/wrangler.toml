@@ -1,5 +1,5 @@
 name = "stripe-toddler"
-main = "build/worker/index.js"
+main = "build/worker/shim.mjs"
 compatibility_date = "2024-04-01"
 
 [build]
