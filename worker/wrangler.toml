@@ -1,0 +1,16 @@
+name = "stripe-toddler"
+main = "src/lib.rs"
+compatibility_date = "2024-04-01"
+
+[[kv_namespaces]]
+binding = "STRIPE_TODDLER_INVENTORY"
+id = "249c8071a8a74054ac7352d782d118bb"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "stripe-toddler-images"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stripe_toddler_analytics"
+database_id = "dd85386a-f27b-4cc0-b95a-190881f876fe"
