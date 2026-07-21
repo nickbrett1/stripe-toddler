@@ -329,10 +329,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let now = Date::now().as_millis() / 1000;
 
             // Log Transaction in D1
-            let tx_stmt = match db.prepare("INSERT INTO transactions (transaction_id, payment_intent_id, amount_cents, status, created_at) VALUES (?, ?, ?, ?, ?)") {
-                Ok(s) => s,
-                Err(e) => return error_response(&format!("D1 SQL Preparation Error: {:?}", e), 500),
-            };
+            let tx_stmt = db.prepare("INSERT INTO transactions (transaction_id, payment_intent_id, amount_cents, status, created_at) VALUES (?, ?, ?, ?, ?)");
 
             let bound_tx_stmt = match tx_stmt.bind(&[
                 JsValue::from_str(&tx_id),
@@ -351,10 +348,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
             // Log Line Items
             for item in req_data.items {
-                let item_stmt = match db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)") {
-                    Ok(s) => s,
-                    Err(e) => return error_response(&format!("D1 SQL Item Prep Error: {:?}", e), 500),
-                };
+                let item_stmt = db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)");
 
                 let bound_item_stmt = match item_stmt.bind(&[
                     JsValue::from_str(&tx_id),
@@ -467,13 +461,13 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Err(e) => return error_response(&format!("R2 Bucket Binding Error: {:?}", e), 500),
             };
 
-            let ext = match file.content_type().as_deref() {
-                Some("image/png") => "png",
+            let ext = match file.type_().as_str() {
+                "image/png" => "png",
                 _ => "jpg",
             };
 
             let key = format!("images/{}.{}", barcode, ext);
-            if let Err(e) = bucket.put(&key, bytes).await {
+            if let Err(e) = bucket.put(&key, bytes).execute().await {
                 return error_response(&format!("R2 Upload Failed: {:?}", e), 500);
             }
 
@@ -509,10 +503,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Err(e) => return error_response(&format!("D1 Error: {:?}", e), 500),
             };
 
-            let tx_stmt = match db.prepare("SELECT * FROM transactions ORDER BY created_at DESC LIMIT ? OFFSET ?") {
-                Ok(s) => s,
-                Err(e) => return error_response(&format!("D1 Prep Error: {:?}", e), 500),
-            };
+            let tx_stmt = db.prepare("SELECT * FROM transactions ORDER BY created_at DESC LIMIT ? OFFSET ?");
 
             let bound_tx_stmt = match tx_stmt.bind(&[
                 JsValue::from_f64(limit as f64),
@@ -534,10 +525,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
             let mut results = Vec::new();
             for tx in tx_records {
-                let items_stmt = match db.prepare("SELECT * FROM transaction_items WHERE transaction_id = ?") {
-                    Ok(s) => s,
-                    Err(e) => return error_response(&format!("D1 Item Prep Error: {:?}", e), 500),
-                };
+                let items_stmt = db.prepare("SELECT * FROM transaction_items WHERE transaction_id = ?");
 
                 let bound_items_stmt = match items_stmt.bind(&[JsValue::from_str(&tx.transaction_id)]) {
                     Ok(b) => b,
