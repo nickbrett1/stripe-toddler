@@ -30,6 +30,9 @@ wrangler.jsonc
 
 
 # Rust
-/target
+target/
+**/target/
 Cargo.lock
+.rustc_info.json
+**/.rustc_info.json
 
