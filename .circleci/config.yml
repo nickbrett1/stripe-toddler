@@ -48,7 +48,8 @@ jobs:
       - run:
           name: Build
           command: npm run build
-      - sonarcloud/scan
+      - sonarcloud/scan:
+          sonar_properties_path: .sonarcloud.properties
 
 
 
