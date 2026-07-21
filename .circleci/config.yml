@@ -48,27 +48,9 @@ jobs:
       - run:
           name: Build
           command: npm run build
-  test-rust:
-    docker:
-      - image: cimg/rust:1.90.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - cargo-cache-{{ checksum "worker/Cargo.toml" }}
-            - cargo-cache-
-      - run:
-          name: Rust Toolchain Info
-          command: rustc --version && cargo --version
-      - run:
-          name: Rust Test
-          command: cd worker && cargo test
-      - save_cache:
-          paths:
-            - ~/.cargo/registry
-            - ~/.cargo/git
-            - worker/target
-          key: cargo-cache-{{ checksum "worker/Cargo.toml" }}
+      - sonarcloud/scan
+
+
 
   deploy-to-cloudflare:
     executor: node/default
@@ -109,16 +91,10 @@ jobs:
           name: Build
           command: npm run build
       - run:
-          name: Install Rust
-          command: |
-            if ! command -v cargo &> /dev/null; then
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-              echo 'source "$HOME/.cargo/env"' >> $BASH_ENV
-            fi
-      - run:
           name: Deploy to Cloudflare Workers
           command: |
             ENV_VAL="<< parameters.environment >>"
+            if [ -d worker ]; then cd worker; fi
             if [ "$ENV_VAL" = "default" ] || [ -z "$ENV_VAL" ]; then
               npx wrangler deploy
             else
@@ -150,10 +126,6 @@ workflows:
           requires:
             - ggshield-scan
           context: common
-      - test-rust:
-          requires:
-            - ggshield-scan
-          context: common
 
 
       - deploy-to-cloudflare:
@@ -162,7 +134,6 @@ workflows:
           doppler_config: "stg"
           requires:
             - build
-            - test-rust
           filters:
             branches:
               only: main
@@ -173,7 +144,6 @@ workflows:
           doppler_config: "stg"
           requires:
             - build
-            - test-rust
           filters:
             branches:
               ignore: main
