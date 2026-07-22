@@ -62,8 +62,8 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         super.init()
         
         // Register token provider if not already set
-        if !Terminal.hasTokenProvider() {
-            Terminal.setTokenProvider(StripeConnectionTokenProvider(apiClient: apiClient))
+        if !Terminal.isInitialized {
+            Terminal.setSharedInstance(tokenProvider: StripeConnectionTokenProvider(apiClient: apiClient))
         }
     }
     
@@ -73,10 +73,9 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         connectionState = .scanning
         
         // Scan for Reader M2 using simulated mode for local development
-        let config = DiscoveryConfiguration(
-            discoveryMethod: .bluetoothScan,
-            simulated: true
-        )
+        let config = try! BluetoothProximityDiscoveryConfigurationBuilder()
+            .setSimulated(true)
+            .build()
         
         discoveryCancelable = Terminal.shared.discoverReaders(config, delegate: self) { [weak self] error in
             guard let self = self else { return }
@@ -133,7 +132,7 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
                     } else if let confirmedIntent = confirmedIntent {
                         // Contactless transaction authorized by physical reader.
                         // Delegate triggers backend payment capture to finalize transaction in D1.
-                        self.delegate?.terminalManagerDidCompletePayment(self, paymentIntentId: confirmedIntent.stripeId)
+                        self.delegate?.terminalManagerDidCompletePayment(self, paymentIntentId: confirmedIntent.stripeId ?? "")
                     }
                 }
             }
@@ -147,9 +146,9 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         connectionState = .connecting
         
         // Location ID is configured to match Stripe Terminal dashboard location ID
-        let connectionConfig = BluetoothConnectionConfiguration(locationId: "tml_placeholder")
+        let connectionConfig = try! BluetoothConnectionConfigurationBuilder(locationId: "tml_placeholder").build()
         
-        Terminal.shared.connectBluetoothReader(firstReader, connectionConfig: connectionConfig) { [weak self] connectedReader, error in
+        Terminal.shared.connectReader(firstReader, connectionConfig: connectionConfig) { [weak self] connectedReader, error in
             guard let self = self else { return }
             
             if let error = error {

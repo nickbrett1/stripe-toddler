@@ -81,17 +81,53 @@ struct ToddlerButtonStyle: ButtonStyle {
     }
 }
 
+#if os(iOS)
+import UIKit
+#endif
+
+public enum ToddlerHapticStyle {
+    case rigid
+    case soft
+    case heavy
+    case medium
+    case light
+}
+
+public enum ToddlerHapticType {
+    case success
+    case warning
+    case error
+}
+
 // MARK: - Haptic Feedback Helper (Rule 8)
-enum ToddlerHaptic {
-    static func play(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
-        let generator = UIImpactFeedbackGenerator(style: style)
+public enum ToddlerHaptic {
+    public static func play(_ style: ToddlerHapticStyle) {
+        #if os(iOS)
+        let uiStyle: UIImpactFeedbackGenerator.FeedbackStyle
+        switch style {
+        case .rigid: uiStyle = .rigid
+        case .soft: uiStyle = .soft
+        case .heavy: uiStyle = .heavy
+        case .medium: uiStyle = .medium
+        case .light: uiStyle = .light
+        }
+        let generator = UIImpactFeedbackGenerator(style: uiStyle)
         generator.prepare()
         generator.impactOccurred()
+        #endif
     }
     
-    static func playNotification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+    public static func playNotification(_ type: ToddlerHapticType) {
+        #if os(iOS)
+        let uiType: UINotificationFeedbackGenerator.FeedbackType
+        switch type {
+        case .success: uiType = .success
+        case .warning: uiType = .warning
+        case .error: uiType = .error
+        }
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
-        generator.notificationOccurred(type)
+        generator.notificationOccurred(uiType)
+        #endif
     }
 }

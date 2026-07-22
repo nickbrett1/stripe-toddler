@@ -50,7 +50,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
     // MARK: - POS Operations
     public func handleBarcodeScanned(_ barcode: String) {
         // Trigger haptic feedback for physical feedback loop (Rule 8)
-        ToddlerHaptic.play(.rigid)
+        ToddlerHaptic.play(ToddlerHapticStyle.rigid)
         
         Task {
             do {
@@ -63,7 +63,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 state = .cartActive(items: cachedCartItems, totalCents: cachedCartTotal)
             } catch {
                 state = .error(message: "Item not found: \(barcode)")
-                ToddlerHaptic.playNotification(.error)
+                ToddlerHaptic.playNotification(ToddlerHapticType.error)
             }
         }
     }
@@ -72,7 +72,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         guard index >= 0 && index < cachedCartItems.count else { return }
         
         // Trigger soft haptic feedback on removal (Rule 8)
-        ToddlerHaptic.play(.soft)
+        ToddlerHaptic.play(ToddlerHapticStyle.soft)
         
         let removedItem = cachedCartItems.remove(at: index)
         cachedCartTotal -= removedItem.priceCents
@@ -88,7 +88,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         guard case .cartActive(let items, let totalCents) = state else { return }
         
         // Trigger heavy haptic on checkout start (Rule 8)
-        ToddlerHaptic.play(.heavy)
+        ToddlerHaptic.play(ToddlerHapticStyle.heavy)
         state = .readerSyncing
         
         Task {
@@ -100,7 +100,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)
             } catch {
                 state = .error(message: "Failed to sync payment reader: \(error.localizedDescription)")
-                ToddlerHaptic.playNotification(.error)
+                ToddlerHaptic.playNotification(ToddlerHapticType.error)
             }
         }
     }
@@ -109,7 +109,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         cachedCartItems.removeAll()
         cachedCartTotal = 0
         state = .waitingForScan
-        ToddlerHaptic.play(.medium)
+        ToddlerHaptic.play(ToddlerHapticStyle.medium)
     }
     
     // MARK: - BarcodeScannerDelegate
@@ -119,7 +119,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
     
     public func didEncounterScannerError(_ error: Error) {
         state = .error(message: "Scanner Error: \(error.localizedDescription)")
-        ToddlerHaptic.playNotification(.error)
+        ToddlerHaptic.playNotification(ToddlerHapticType.error)
     }
     
     // MARK: - StripeTerminalManagerDelegate
@@ -134,7 +134,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
     
     public func terminalManager(_ manager: StripeTerminalManagerProtocol, didEncounterError error: Error) {
         state = .error(message: "Terminal Error: \(error.localizedDescription)")
-        ToddlerHaptic.playNotification(.error)
+        ToddlerHaptic.playNotification(ToddlerHapticType.error)
     }
     
     public func terminalManagerDidCompletePayment(_ manager: StripeTerminalManagerProtocol, paymentIntentId: String) {
@@ -150,10 +150,10 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 
                 // Show celebration overlay! (Rule 4.3)
                 state = .celebrating(itemsSold: cachedCartItems)
-                ToddlerHaptic.playNotification(.success)
+                ToddlerHaptic.playNotification(ToddlerHapticType.success)
             } catch {
                 state = .error(message: "Capture failed: \(error.localizedDescription)")
-                ToddlerHaptic.playNotification(.error)
+                ToddlerHaptic.playNotification(ToddlerHapticType.error)
             }
         }
     }
