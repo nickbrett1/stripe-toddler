@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+@testable import StripeToddlerPOS
 
 // MARK: - API Client Mock
 final class MockBackendAPIClient: BackendAPIClientProtocol {
