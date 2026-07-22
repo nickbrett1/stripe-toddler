@@ -25,11 +25,12 @@ public protocol StripeTerminalManagerProtocol: AnyObject {
 }
 
 // MARK: - Stripe Terminal Connection Token Provider
-private final class StripeConnectionTokenProvider: ConnectionTokenProvider {
+final class StripeConnectionTokenProvider: NSObject, ConnectionTokenProvider {
     private let apiClient: BackendAPIClientProtocol
     
     init(apiClient: BackendAPIClientProtocol) {
         self.apiClient = apiClient
+        super.init()
     }
     
     func fetchConnectionToken(_ completion: @escaping ConnectionTokenCompletionBlock) {
@@ -45,7 +46,7 @@ private final class StripeConnectionTokenProvider: ConnectionTokenProvider {
 }
 
 // MARK: - Stripe Terminal Manager Implementation
-public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtocol, DiscoveryDelegate, TerminalDelegate, BluetoothReaderDelegate {
+public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtocol, DiscoveryDelegate, TerminalDelegate, ReaderDelegate, MobileReaderDelegate, OfflineDelegate {
     public weak var delegate: StripeTerminalManagerDelegate?
     
     public private(set) var connectionState: ReaderConnectionState = .disconnected {
@@ -63,7 +64,13 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         
         // Register token provider if not already set
         if !Terminal.isInitialized() {
-            Terminal.initWithTokenProvider(StripeConnectionTokenProvider(apiClient: apiClient), delegate: self)
+            let tokenProvider: ConnectionTokenProvider = StripeConnectionTokenProvider(apiClient: apiClient)
+            Terminal.initWithTokenProvider(
+                tokenProvider,
+                delegate: self,
+                offlineDelegate: self,
+                logLevel: .none
+            )
         }
     }
     
@@ -146,9 +153,9 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         connectionState = .connecting
         
         // Location ID is configured to match Stripe Terminal dashboard location ID
-        let connectionConfig = try! BluetoothConnectionConfigurationBuilder(locationId: "tml_placeholder").build()
+        let connectionConfig = try! BluetoothConnectionConfigurationBuilder(delegate: self, locationId: "tml_placeholder").build()
         
-        Terminal.shared.connectReader(firstReader, connectionConfig: connectionConfig, delegate: self) { [weak self] connectedReader, error in
+        Terminal.shared.connectReader(firstReader, connectionConfig: connectionConfig) { [weak self] connectedReader, error in
             guard let self = self else { return }
             
             if let error = error {
@@ -162,4 +169,49 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
             }
         }
     }
+    
+    // MARK: - MobileReaderDelegate placeholders
+    public func reader(_ reader: Reader, didReportAvailableUpdate update: ReaderSoftwareUpdate) {}
+    public func reader(_ reader: Reader, didStartInstallingUpdate update: ReaderSoftwareUpdate, cancelable: Cancelable?) {}
+    public func reader(_ reader: Reader, didReportReaderSoftwareUpdateProgress progress: Float) {}
+    public func reader(_ reader: Reader, didFinishInstallingUpdate update: ReaderSoftwareUpdate?, error: Error?) {}
+    public func reader(_ reader: Reader, didRequestReaderInput inputOptions: ReaderInputOptions) {}
+    public func reader(_ reader: Reader, didRequestReaderDisplayMessage displayMessage: ReaderDisplayMessage) {}
+    public func reader(_ reader: Reader, didReportReaderEvent event: ReaderEvent, info: [AnyHashable: Any]?) {}
+    public func reader(_ reader: Reader, didReportBatteryLevel batteryLevel: Float, status: BatteryStatus, isCharging: Bool) {}
+    public func readerDidReportLowBatteryWarning(_ reader: Reader) {}
+    
+    public func reader(
+        _ reader: Reader,
+        didRequestPaymentMethodSelection paymentIntent: PaymentIntent,
+        availablePaymentOptions: [PaymentOption],
+        completion: @escaping PaymentMethodSelectionCompletionBlock
+    ) {
+        completion(availablePaymentOptions.first, nil)
+    }
+    
+    public func reader(
+        _ reader: Reader,
+        didRequestQrCodeDisplay paymentIntent: PaymentIntent,
+        qrData: QrCodeDisplayData,
+        completion: @escaping QrCodeDisplayCompletionBlock
+    ) {
+        completion(nil)
+    }
+    
+    // MARK: - ReaderDelegate placeholders
+    public func reader(_ reader: Reader, didDisconnect reason: DisconnectReason) {}
+    public func reader(_ reader: Reader, didStartReconnect cancelable: Cancelable, disconnectReason: DisconnectReason) {}
+    public func readerDidFailReconnect(_ reader: Reader) {}
+    public func readerDidSucceedReconnect(_ reader: Reader) {}
+    
+    // MARK: - TerminalDelegate placeholders
+    public func terminal(_ terminal: Terminal, didChangePaymentStatus status: PaymentStatus) {}
+    public func terminal(_ terminal: Terminal, didChangeConnectionStatus status: ConnectionStatus) {}
+    public func terminal(_ terminal: Terminal, didReportUnexpectedReaderDisconnect reader: Reader) {}
+    
+    // MARK: - OfflineDelegate placeholders
+    public func terminal(_ terminal: Terminal, didChange offlineStatus: OfflineStatus) {}
+    public func terminal(_ terminal: Terminal, didForwardPaymentIntent intent: PaymentIntent, error: Error?) {}
+    public func terminal(_ terminal: Terminal, didReportForwardingError error: Error) {}
 }

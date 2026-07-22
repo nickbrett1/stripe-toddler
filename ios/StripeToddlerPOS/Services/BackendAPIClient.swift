@@ -97,7 +97,7 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         let hash = Data(SHA256.hash(data: challengeData))
         
         // 3. Attest the generated keyId
-        let attestation = try await withCheckedThrowingContinuation { continuation in
+        let attestation: Data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
             attestService.attestKey(keyId, clientDataHash: hash) { attestation, error in
                 if let error = error {
                     continuation.resume(throwing: error)
@@ -165,7 +165,7 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         
         let clientDataHash = Data(SHA256.hash(data: clientData))
         do {
-            let assertion = try await withCheckedThrowingContinuation { continuation in
+            let assertion: Data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
                 attestService.generateAssertion(keyId, clientDataHash: clientDataHash) { assertion, error in
                     if let error = error {
                         continuation.resume(throwing: error)
