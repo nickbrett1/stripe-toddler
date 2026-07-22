@@ -88,7 +88,7 @@ jobs:
           name: Install worker-build
           command: |
             if ! command -v worker-build &> /dev/null; then
-              cargo install worker-build
+              cargo install --locked worker-build
             fi
       - save_cache:
           paths:
