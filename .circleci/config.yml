@@ -54,7 +54,7 @@ jobs:
 
   deploy-to-cloudflare:
     docker:
-      - image: cimg/rust:1.81.0-node
+      - image: cimg/rust:1.85.0-node
     parameters:
       environment:
         type: string
