@@ -53,7 +53,8 @@ jobs:
 
 
   deploy-to-cloudflare:
-    executor: node/default
+    docker:
+      - image: cimg/rust:1.76.0-node
     parameters:
       environment:
         type: string
@@ -67,6 +68,10 @@ jobs:
           keys:
             - v1-deps-{{ checksum "package.json" }}
             - v1-deps-
+      - restore_cache:
+          keys:
+            - v1-cargo-{{ checksum "worker/Cargo.toml" }}
+            - v1-cargo-
       - run:
           name: Install Packages
           command: |
@@ -79,6 +84,17 @@ jobs:
           paths:
             - node_modules
           key: v1-deps-{{ checksum "package.json" }}
+      - run:
+          name: Install worker-build
+          command: |
+            if ! command -v worker-build &> /dev/null; then
+              cargo install worker-build
+            fi
+      - save_cache:
+          paths:
+            - ~/.cargo
+            - worker/target
+          key: v1-cargo-{{ checksum "worker/Cargo.toml" }}
       - install_doppler
       - run:
           name: Setup Wrangler Config
