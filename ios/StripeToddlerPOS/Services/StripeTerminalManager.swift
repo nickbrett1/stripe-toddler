@@ -45,7 +45,7 @@ private final class StripeConnectionTokenProvider: ConnectionTokenProvider {
 }
 
 // MARK: - Stripe Terminal Manager Implementation
-public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtocol, DiscoveryDelegate, TerminalDelegate {
+public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtocol, DiscoveryDelegate, TerminalDelegate, BluetoothReaderDelegate {
     public weak var delegate: StripeTerminalManagerDelegate?
     
     public private(set) var connectionState: ReaderConnectionState = .disconnected {
@@ -62,8 +62,8 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         super.init()
         
         // Register token provider if not already set
-        if !Terminal.isInitialized {
-            Terminal.setSharedInstance(tokenProvider: StripeConnectionTokenProvider(apiClient: apiClient))
+        if !Terminal.isInitialized() {
+            Terminal.initWithTokenProvider(StripeConnectionTokenProvider(apiClient: apiClient), delegate: self)
         }
     }
     
@@ -148,7 +148,7 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         // Location ID is configured to match Stripe Terminal dashboard location ID
         let connectionConfig = try! BluetoothConnectionConfigurationBuilder(locationId: "tml_placeholder").build()
         
-        Terminal.shared.connectReader(firstReader, connectionConfig: connectionConfig) { [weak self] connectedReader, error in
+        Terminal.shared.connectReader(firstReader, connectionConfig: connectionConfig, delegate: self) { [weak self] connectedReader, error in
             guard let self = self else { return }
             
             if let error = error {
