@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/rust:1.90
+FROM mcr.microsoft.com/devcontainers/rust:1-bookworm
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends git socat curl gnupg nodejs npm openssh-server mosh tmux micro xclip \
     && curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg \
