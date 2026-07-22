@@ -88,7 +88,7 @@ jobs:
           name: Install worker-build
           command: |
             if ! command -v worker-build &> /dev/null; then
-              cargo install --git https://github.com/cloudflare/workers-rs --tag worker-build-v0.8.5 --locked worker-build
+              cargo install --git https://github.com/cloudflare/workers-rs --tag v0.8.5 --locked worker-build
             fi
       - save_cache:
           paths:
