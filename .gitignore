@@ -36,3 +36,11 @@ Cargo.lock
 .rustc_info.json
 **/.rustc_info.json
 
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
