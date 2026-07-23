@@ -8,6 +8,15 @@ console.error(`[Proxy] Starting SSE proxy. Target SSE: ${sseUrlStr}`);
 let postUrl = null;
 const messageQueue = [];
 
+// Prevent client initialization hang by exiting if handshake is not completed within 5 seconds
+const handshakeTimeout = setTimeout(() => {
+  console.error(
+    "[Proxy] Error: Initialization handshake timeout (5s) reached. Exiting to prevent client hang. Check Xcode/remote connection."
+  );
+  process.exit(1);
+}, 5000);
+
+
 // Keep alive agents to optimize connection reuse and prevent socket exhaustion
 const httpAgent = new http.Agent({
   keepAlive: true,
@@ -119,6 +128,7 @@ function connectSSE() {
               if (data.includes("SSE Connection established")) {
                 console.error(`[Proxy] Gateway notification: ${data}`);
               } else {
+                clearTimeout(handshakeTimeout);
                 process.stdout.write(data + "\n");
               }
             }
