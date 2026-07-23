@@ -22,6 +22,31 @@ else
     sudo cp -f /etc/ssh/ssh_host_* /var/lib/tailscale/ssh/
 fi
 
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.zshrc" ]; then
+    echo "INFO: Copying .zshrc to $USER_HOME_DIR/.zshrc"
+    cp "/workspaces/stripe-toddler/.devcontainer/.zshrc" "$USER_HOME_DIR/.zshrc"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.zshrc"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.zshrc not found, skipping copy."
+fi
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.p10k.zsh" ]; then
+    echo "INFO: Copying .p10k.zsh to $USER_HOME_DIR/.p10k.zsh"
+    cp "/workspaces/stripe-toddler/.devcontainer/.p10k.zsh" "$USER_HOME_DIR/.p10k.zsh"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.p10k.zsh"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.p10k.zsh not found, skipping copy."
+fi
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.tmux.conf" ]; then
+    echo "INFO: Copying .tmux.conf to $USER_HOME_DIR/.tmux.conf"
+    cp "/workspaces/stripe-toddler/.devcontainer/.tmux.conf" "$USER_HOME_DIR/.tmux.conf"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.tmux.conf"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.tmux.conf not found, skipping copy."
+fi
+
 echo "INFO: Ensuring SSH service is running..."
 sudo service ssh restart
 mkdir -p "$USER_HOME_DIR/.wrangler"
@@ -59,12 +84,15 @@ mkdir -p "$USER_HOME_DIR/.agy"
 printf '{\n  "selectedAuthType": "oauth-personal",\n  "general": {\n    "sessionRetention": {\n      "enabled": true,\n      "maxAge": "30d",\n      "warningAcknowledged": true\n    }\n  },\n  "ide": {\n    "hasSeenNudge": true,\n    "enabled": true\n  }\n}\n' > "$USER_HOME_DIR/.agy/settings.json"
 sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.agy"
 
+echo "INFO: Installing agy-telemetry hook..."
+curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py | python3
+
 echo "INFO: Installing specdag globally..."
 npm install -g @japorto100/specdag
 
 if ! pgrep -f "socat TCP-LISTEN:9222" > /dev/null; then
     echo "Setup bridget to access Chrome DevTools Protocol over a secure tunnel..."
-    sudo start-stop-daemon --start --background --pidfile /var/run/socat-9222.pid --make-pidfile --chuid node:node --exec /usr/bin/socat -- TCP-LISTEN:9222,fork,bind=127.0.0.1 TCP:host.docker.internal:9222
+    sudo start-stop-daemon --start --background --pidfile /var/run/socat-9222.pid --make-pidfile --chuid $(id -un):$(id -gn) --exec /usr/bin/socat -- TCP-LISTEN:9222,fork,bind=127.0.0.1 TCP:host.docker.internal:9222
 fi
 
 echo "INFO: Checking Tailscale status..."
