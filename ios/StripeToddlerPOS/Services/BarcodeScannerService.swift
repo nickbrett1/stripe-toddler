@@ -71,7 +71,7 @@ public final class BarcodeScannerService: BarcodeScannerServiceProtocol {
 }
 
 // MARK: - String Filter Helper
-private extension String {
+extension String {
     func filteringForBarcode() -> String {
         // Barcode HID wedges output letters and numbers
         let allowedCharacters = CharacterSet.alphanumerics

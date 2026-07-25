@@ -5,8 +5,8 @@ mod models;
 use models::*;
 
 fn cors_headers() -> Result<Headers> {
-    let headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "*")?;
+    let mut headers = Headers::new();
+    headers.set("Access-Control-Allow-Origin", "https://fintechnick.com")?;
     headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
     headers.set(
         "Access-Control-Allow-Headers",
@@ -34,6 +34,8 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
     Ok(response)
 }
 
+use subtle::ConstantTimeEq;
+
 // Authentication Helpers
 fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     let expected_key = match env.var("ADMIN_API_KEY") {
@@ -42,37 +44,32 @@ fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     };
     let headers = req.headers();
     if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
-        return Ok(provided_key == expected_key);
+        if provided_key.len() != expected_key.len() {
+            return Ok(false);
+        }
+        return Ok(provided_key.as_bytes().ct_eq(expected_key.as_bytes()).into());
+    }
+    Ok(false)
+}
+
+fn validate_app_attest_auth_inner(assertion: Option<String>) -> Result<bool> {
+    if let Some(val) = assertion {
+        return Ok(!val.trim().is_empty());
     }
     Ok(false)
 }
 
 fn validate_app_attest_auth(req: &Request) -> Result<bool> {
     let headers = req.headers();
-    if let Ok(Some(assertion)) = headers.get("X-App-Attest-Assertion") {
-        return Ok(!assertion.trim().is_empty());
-    }
-    Ok(false)
+    let assertion = headers.get("X-App-Attest-Assertion").unwrap_or(None);
+    validate_app_attest_auth_inner(assertion)
 }
 
-async fn handle_attest_challenge(_req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let now = Date::now().as_millis() / 1000;
-    let expires_at = now + 300;
-    let challenge = uuid::Uuid::new_v4().to_string();
-
-    let kv = match ctx.env.kv("STRIPE_TODDLER_INVENTORY") {
-        Ok(k) => k,
-        Err(e) => return error_response(&format!("KV Error: {:?}", e), 500),
-    };
-
-    if let Err(e) = kv
-        .put(&format!("challenge:{}", challenge), now)
-        .map_err(|e| e)?
-        .expiration_ttl(300)
-        .execute()
-        .await
-    {
-        return error_response(&format!("KV Put Error: {:?}", e), 500);
+#[event(fetch)]
+pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    // Handle CORS preflight requests
+    if req.method() == Method::Options {
+        return cors_response();
     }
 
     let resp = AttestChallengeResponse {
@@ -82,11 +79,14 @@ async fn handle_attest_challenge(_req: Request, ctx: RouteContext<()>) -> Result
     json_response(&resp)
 }
 
-async fn handle_attest_verify(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let req_body: VerifyAttestRequest = match req.json().await {
-        Ok(b) => b,
-        Err(_) => return error_response("Malformed JSON request", 400),
-    };
+            if let Err(e) = kv.put(&format!("challenge:{}", challenge), now)
+                .map_err(|e| e)?
+                .expiration_ttl(300)
+                .execute()
+                .await
+            {
+                return error_response(&format!("KV Put Error: {:?}", e), 500);
+            }
 
     let kv = match ctx.env.kv("STRIPE_TODDLER_INVENTORY") {
         Ok(k) => k,
@@ -345,22 +345,30 @@ async fn handle_terminal_capture(mut req: Request, ctx: RouteContext<()>) -> Res
         Err(e) => return error_response(&format!("D1 Error: {:?}", e), 500),
     };
 
-    let tx_id = uuid::Uuid::new_v4().to_string();
-    let now = Date::now().as_millis() / 1000;
+            // Log Line Items
+            let mut statements = Vec::new();
+            for item in req_data.items {
+                let item_stmt = db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)");
 
-    // Log Transaction in D1
-    let tx_stmt = db.prepare("INSERT INTO transactions (transaction_id, payment_intent_id, amount_cents, status, created_at) VALUES (?, ?, ?, ?, ?)");
+                let bound_item_stmt = match item_stmt.bind(&[
+                    JsValue::from_str(&tx_id),
+                    JsValue::from_str(&item.barcode),
+                    JsValue::from_str(&item.name),
+                    JsValue::from_f64(item.price_cents as f64),
+                    JsValue::from_f64(item.quantity as f64),
+                ]) {
+                    Ok(b) => b,
+                    Err(e) => return error_response(&format!("D1 SQL Item Binding Error: {:?}", e), 500),
+                };
 
-    let bound_tx_stmt = match tx_stmt.bind(&[
-        JsValue::from_str(&tx_id),
-        JsValue::from_str(&req_data.payment_intent_id),
-        JsValue::from_f64(req_data.amount_cents as f64),
-        JsValue::from_str("captured"),
-        JsValue::from_f64(now as f64),
-    ]) {
-        Ok(b) => b,
-        Err(e) => return error_response(&format!("D1 SQL Binding Error: {:?}", e), 500),
-    };
+                statements.push(bound_item_stmt);
+            }
+
+            if !statements.is_empty() {
+                if let Err(e) = db.batch(statements).await {
+                    return error_response(&format!("D1 Items Batch Insert Error: {:?}", e), 500);
+                }
+            }
 
     if let Err(e) = bound_tx_stmt.run().await {
         return error_response(&format!("D1 Transaction Execution Error: {:?}", e), 500);
@@ -393,10 +401,22 @@ async fn handle_terminal_capture(mut req: Request, ctx: RouteContext<()>) -> Res
     json_response(&resp)
 }
 
-async fn handle_admin_inventory_get(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    if !validate_admin_auth(&req, &ctx.env)? {
-        return error_response("Unauthorized: Invalid Admin API Key", 401);
-    }
+            let fetch_futures = list_result.keys.iter().map(|key| {
+                let kv_store = &kv;
+                async move {
+                    if let Ok(Some(item_str)) = kv_store.get(&key.name).text().await {
+                        serde_json::from_str::<InventoryItem>(&item_str).ok()
+                    } else {
+                        None
+                    }
+                }
+            });
+
+            let items: Vec<InventoryItem> = futures_util::future::join_all(fetch_futures)
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
 
     let kv = match ctx.env.kv("STRIPE_TODDLER_INVENTORY") {
         Ok(k) => k,
@@ -495,10 +515,11 @@ async fn handle_admin_inventory_upload(
         _ => "jpg",
     };
 
-    let key = format!("images/{}.{}", barcode, ext);
-    if let Err(e) = bucket.put(&key, bytes).execute().await {
-        return error_response(&format!("R2 Upload Failed: {:?}", e), 500);
-    }
+            let limit = req.url()?.query_pairs()
+                .find(|(k, _)| k == "limit")
+                .map(|(_, v)| v.parse::<u32>().unwrap_or(100))
+                .unwrap_or(100)
+                .min(1000);
 
     let account_id = match ctx.env.var("CLOUDFLARE_ACCOUNT_ID") {
         Ok(a) => a.to_string(),
@@ -677,5 +698,29 @@ mod tests {
         let deserialized: CaptureTransactionRequest = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.payment_intent_id, "pi_123");
         assert_eq!(deserialized.items[0].name, "Teddy");
+    }
+
+    #[test]
+    fn test_app_attest_auth_valid() {
+        let assertion = Some("valid_assertion".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), true);
+    }
+
+    #[test]
+    fn test_app_attest_auth_empty() {
+        let assertion = Some("".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    }
+
+    #[test]
+    fn test_app_attest_auth_whitespace() {
+        let assertion = Some("   ".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    }
+
+    #[test]
+    fn test_app_attest_auth_missing() {
+        let assertion = None;
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
     }
 }
