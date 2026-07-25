@@ -6,7 +6,7 @@ use models::*;
 
 fn cors_headers() -> Result<Headers> {
     let mut headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "*")?;
+    headers.set("Access-Control-Allow-Origin", "https://fintechnick.com")?;
     headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
     headers.set("Access-Control-Allow-Headers", "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion")?;
     headers.set("Access-Control-Max-Age", "86400")?;
