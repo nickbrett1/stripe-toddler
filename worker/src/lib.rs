@@ -1,14 +1,17 @@
-use worker::*;
 use wasm_bindgen::JsValue;
+use worker::*;
 
 mod models;
 use models::*;
 
 fn cors_headers() -> Result<Headers> {
     let mut headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "*")?;
+    headers.set("Access-Control-Allow-Origin", "https://fintechnick.com")?;
     headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion")?;
+    headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion",
+    )?;
     headers.set("Access-Control-Max-Age", "86400")?;
     Ok(headers)
 }
@@ -31,18 +34,21 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
     Ok(response)
 }
 
-// Authentication Helpers
-fn validate_admin_auth_logic(expected_key: Option<String>, provided_key: Option<String>) -> bool {
-    match (expected_key, provided_key) {
-        (Some(expected), Some(provided)) => expected == provided,
-        _ => false,
-    }
-}
+use subtle::ConstantTimeEq;
 
+// Authentication Helpers
 fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
-    let expected_key = env.var("ADMIN_API_KEY").ok().map(|k| k.to_string());
-    let provided_key = req.headers().get("X-Admin-API-Key").unwrap_or(None);
-    Ok(validate_admin_auth_logic(expected_key, provided_key))
+    let expected_key = match env.var("ADMIN_API_KEY") {
+        Ok(k) => k.to_string(),
+        Err(_) => return Ok(false),
+    };
+    let headers = req.headers();
+    if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
+        if provided_key.len() != expected_key.len() {
+            return Ok(false);
+        }
+        return Ok(provided_key.as_bytes().ct_eq(expected_key.as_bytes()).into());
+    }
 }
 
 fn validate_app_attest_auth(req: &Request) -> Result<bool> {
@@ -77,7 +83,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 .map_err(|e| e)?
                 .expiration_ttl(300)
                 .execute()
-                .await 
+                .await
             {
                 return error_response(&format!("KV Put Error: {:?}", e), 500);
             }
@@ -348,6 +354,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             }
 
             // Log Line Items
+            let mut statements = Vec::new();
             for item in req_data.items {
                 let item_stmt = db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)");
 
@@ -362,8 +369,12 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                     Err(e) => return error_response(&format!("D1 SQL Item Binding Error: {:?}", e), 500),
                 };
 
-                if let Err(e) = bound_item_stmt.run().await {
-                    return error_response(&format!("D1 Item Insert Error: {:?}", e), 500);
+                statements.push(bound_item_stmt);
+            }
+
+            if !statements.is_empty() {
+                if let Err(e) = db.batch(statements).await {
+                    return error_response(&format!("D1 Items Batch Insert Error: {:?}", e), 500);
                 }
             }
 
@@ -492,7 +503,8 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let limit = req.url()?.query_pairs()
                 .find(|(k, _)| k == "limit")
                 .map(|(_, v)| v.parse::<u32>().unwrap_or(100))
-                .unwrap_or(100);
+                .unwrap_or(100)
+                .min(1000);
 
             let offset = req.url()?.query_pairs()
                 .find(|(k, _)| k == "offset")
