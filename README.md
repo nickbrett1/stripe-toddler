@@ -1,5 +1,7 @@
 # Stripe Toddler
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/nickbrett1/stripe-toddler/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/nickbrett1/stripe-toddler/tree/main) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=nickbrett1_stripe-toddler&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=nickbrett1_stripe-toddler)
+
 A simple, fun, and colorful point-of-sale system designed for a 3-year-old toddler, built to explore and learn about Stripe's APIs and services.
 
 ## Goals and Overview
