@@ -17,6 +17,8 @@ public enum BackendAPIError: LocalizedError {
     case invalidURL
     case badResponse(statusCode: Int)
     case missingData
+    case invalidResponse
+    case itemNotFound
     
     public var errorDescription: String? {
         switch self {
@@ -26,6 +28,10 @@ public enum BackendAPIError: LocalizedError {
             return "Server returned an error status code: \(code)."
         case .missingData:
             return "The server did not send any data."
+        case .invalidResponse:
+            return "Invalid response from server."
+        case .itemNotFound:
+            return "Item not found."
         }
     }
 }
@@ -206,7 +212,24 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         request.httpMethod = "GET"
         
         let barcodeData = barcode.data(using: .utf8)!
-        return try await performRequest(for: &request, clientData: barcodeData)
+        let assertion = await generateAssertionHeader(for: barcodeData)
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw BackendAPIError.invalidResponse
+        }
+
+        if httpResponse.statusCode == 404 {
+            throw BackendAPIError.itemNotFound
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
+        }
+        
+        return try jsonDecoder.decode(POSInventoryItem.self, from: data)
     }
     
     public func fetchTerminalConnectionToken() async throws -> String {
