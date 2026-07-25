@@ -32,16 +32,18 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
 }
 
 // Authentication Helpers
-fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
-    let expected_key = match env.var("ADMIN_API_KEY") {
-        Ok(k) => k.to_string(),
-        Err(_) => return Ok(false),
-    };
-    let headers = req.headers();
-    if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
-        return Ok(provided_key == expected_key);
+fn check_admin_auth_logic(provided_key: Option<String>, expected_key: Option<String>) -> bool {
+    match (provided_key, expected_key) {
+        (Some(p), Some(e)) => p == e,
+        _ => false,
     }
-    Ok(false)
+}
+
+fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
+    let expected_key = env.var("ADMIN_API_KEY").ok().map(|k| k.to_string());
+    let provided_key = req.headers().get("X-Admin-API-Key").ok().flatten();
+
+    Ok(check_admin_auth_logic(provided_key, expected_key))
 }
 
 fn validate_app_attest_auth(req: &Request) -> Result<bool> {
@@ -610,5 +612,45 @@ mod tests {
         let deserialized: CaptureTransactionRequest = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.payment_intent_id, "pi_123");
         assert_eq!(deserialized.items[0].name, "Teddy");
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_valid() {
+        assert!(check_admin_auth_logic(
+            Some("supersecret".to_string()),
+            Some("supersecret".to_string())
+        ));
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_invalid() {
+        assert!(!check_admin_auth_logic(
+            Some("wrongkey".to_string()),
+            Some("supersecret".to_string())
+        ));
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_missing_provided() {
+        assert!(!check_admin_auth_logic(
+            None,
+            Some("supersecret".to_string())
+        ));
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_missing_expected() {
+        assert!(!check_admin_auth_logic(
+            Some("supersecret".to_string()),
+            None
+        ));
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_both_missing() {
+        assert!(!check_admin_auth_logic(
+            None,
+            None
+        ));
     }
 }
