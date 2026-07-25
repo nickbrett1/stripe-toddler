@@ -402,14 +402,22 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Err(e) => return error_response(&format!("KV List Error: {:?}", e), 500),
             };
 
-            let mut items = Vec::new();
-            for key in list_result.keys {
-                if let Ok(Some(item_str)) = kv.get(&key.name).text().await {
-                    if let Ok(item) = serde_json::from_str::<InventoryItem>(&item_str) {
-                        items.push(item);
+            let fetch_futures = list_result.keys.iter().map(|key| {
+                let kv_store = &kv;
+                async move {
+                    if let Ok(Some(item_str)) = kv_store.get(&key.name).text().await {
+                        serde_json::from_str::<InventoryItem>(&item_str).ok()
+                    } else {
+                        None
                     }
                 }
-            }
+            });
+
+            let items: Vec<InventoryItem> = futures_util::future::join_all(fetch_futures)
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
 
             json_response(&items)
         })
