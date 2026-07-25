@@ -1,0 +1,172 @@
+
+ ⛅️ wrangler 4.114.0
+────────────────────
+[custom build] Running: cargo install -q worker-build && worker-build --release
+[custom build] [INFO]: 🎯  Checking for the Wasm target...
+[custom build]
+[custom build] [INFO]: 🌀  Compiling to Wasm...
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]   --> src/lib.rs:65:47
+[custom build]    |
+[custom build] 65 |         .post_async("/api/attest/challenge", |mut req, ctx| async move {
+[custom build]    |                                               ----^^^
+[custom build]    |                                               |
+[custom build]    |                                               help: remove this `mut`
+[custom build]    |
+[custom build]    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:178:17
+[custom build]     |
+[custom build] 178 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |                 |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:228:17
+[custom build]     |
+[custom build] 228 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |
+[custom build]                  |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:288:17
+[custom build]     |
+[custom build] 288 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |                 |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]  --> src/lib.rs:8:9
+[custom build]   |
+[custom build] 8 |     let mut headers = Headers::new();
+[custom build]   |         ----^^^^^^^
+[custom build]   |         |
+[custom build]   |         help: remove this `mut`
+[custom build]
+[custom build] warning: unused variable: `req`
+[custom build]   --> src/lib.rs:65:47
+[custom build]    |
+[custom build] 65 |         .post_async("/api/attest/challenge", |mut req, ctx| async move {
+[custom build]    |                                               ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_req`
+[custom build]    |
+[custom build]    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+[custom build]
+[custom build] warning: `stripe-toddler-worker` (lib) generated 6 warnings (run `cargo fix --lib -p stripe-toddler-worker` to apply 6 suggestions)
+[custom build]     Finished `release` profile [optimized] target(s) in 0.09s
+[custom build]
+[custom build] [INFO]: Optimizing wasm binaries with `wasm-opt`...
+[custom build]
+[custom build] [INFO]: ✨  Done in 2.17s
+[custom build] [INFO]: 📦   Your wasm pkg is ready to publish at /app/worker/build/.tmp.
+[custom build]
+[custom build]
+[custom build]   index.js  27.2kb
+[custom build]
+[custom build] ⚡ Done in 10ms
+[custom build]
+Using secrets defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                              Resource                  Mode
+env.STRIPE_TODDLER_INVENTORY (249c8071a8a74054ac7352d782d118bb)      KV Namespace              local
+env.DB (stripe_toddler_analytics)                                    D1 Database               local
+env.IMAGES (stripe-toddler-images)                                   R2 Bucket                 local
+env.ADMIN_API_KEY ("(hidden)")                                       Environment Variable      local
+
+The file src changed, restarting build...
+[custom build] Running: cargo install -q worker-build && worker-build --release
+[custom build] [INFO]: 🎯  Checking for the Wasm target...
+[custom build]
+[custom build] [INFO]: 🌀  Compiling to Wasm...
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]   --> src/lib.rs:65:47
+[custom build]    |
+[custom build] 65 |         .post_async("/api/attest/challenge", |mut req, ctx| async move {
+[custom build]    |                                               ----^^^
+[custom build]    |                                               |
+[custom build]    |                                               help: remove this `mut`
+[custom build]    |
+[custom build]    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:178:17
+[custom build]     |
+[custom build] 178 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |                 |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:228:17
+[custom build]     |
+[custom build] 228 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |                 |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]    --> src/lib.rs:288:17
+[custom build]     |
+[custom build] 288 |             let mut headers = Headers::new();
+[custom build]     |                 ----^^^^^^^
+[custom build]     |                 |
+[custom build]     |                 help: remove this `mut`
+[custom build]
+[custom build] warning: variable does not need to be mutable
+[custom build]  --> src/lib.rs:8:9
+[custom build]   |
+[custom build] 8 |     let mut headers = Headers::new();
+[custom build]   |         ----^^^^^^^
+[custom build]   |         |
+[custom build]   |         help: remove this `mut`
+[custom build]
+[custom build] warning: unused variable: `req`
+[custom build]   --> src/lib.rs:65:47
+[custom build]    |
+[custom build] 65 |         .post_async("/api/attest/challenge", |mut req, ctx| async move {
+[custom build]    |                                               ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_req`
+[custom build]    |
+[custom build]    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+[custom build]
+[custom build] warning: `stripe-toddler-worker` (lib) generated 6 warnings (run `cargo fix --lib -p stripe-toddler-worker` to apply 6 suggestions)
+[custom build]     Finished `release` profile [optimized] target(s) in 0.09s
+[custom build]
+[custom build] [INFO]: Optimizing wasm binaries with `wasm-opt`...
+[custom build]
+[custom build] [INFO]: ✨  Done in 2.19s
+[custom build] [INFO]: 📦   Your wasm pkg is ready to publish at /app/worker/build/.tmp.
+[custom build]
+[custom build]
+[custom build]   index.js  27.2kb
+[custom build]
+[custom build] ⚡ Done in 9ms
+[custom build]
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787
+[wrangler:info] GET /api/admin/analytics 200 OK (220ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (187ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (194ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (206ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (203ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (196ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (189ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (211ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (222ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (161ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (155ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (151ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (147ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (141ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (144ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (142ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (141ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (150ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (136ms)
+[wrangler:info] GET /api/admin/analytics 200 OK (133ms)
