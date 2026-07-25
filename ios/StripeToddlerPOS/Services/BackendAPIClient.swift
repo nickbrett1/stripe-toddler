@@ -3,6 +3,16 @@ import DeviceCheck
 import CryptoKit
 import UIKit
 
+// MARK: - App Attest Provider Protocol
+public protocol AppAttestProvider {
+    var isSupported: Bool { get }
+    func generateKey(completionHandler: @escaping (String?, Error?) -> Void)
+    func attestKey(_ keyId: String, clientDataHash: Data, completionHandler: @escaping (Data?, Error?) -> Void)
+    func generateAssertion(_ keyId: String, clientDataHash: Data, completionHandler: @escaping (Data?, Error?) -> Void)
+}
+
+extension DCAppAttestService: AppAttestProvider {}
+
 // MARK: - Backend API Client Protocol
 public protocol BackendAPIClientProtocol: AnyObject {
     func registerDeviceWithAppAttest() async throws
@@ -34,10 +44,10 @@ public enum BackendAPIError: LocalizedError {
 public final class BackendAPIClient: BackendAPIClientProtocol {
     private let baseURL: URL
     private let session: URLSession
-    private let attestService = DCAppAttestService.shared
+    private let attestService: AppAttestProvider
     
     // Store keyId in UserDefaults (Keychain is preferred in production, UserDefaults for simplicity)
-    private var appAttestKeyId: String? {
+    var appAttestKeyId: String? {
         get { UserDefaults.standard.string(forKey: "appAttestKeyId") }
         set { UserDefaults.standard.set(newValue, forKey: "appAttestKeyId") }
     }
@@ -46,9 +56,10 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
     }
     
-    public init(baseURL: URL, session: URLSession = .shared) {
+    public init(baseURL: URL, session: URLSession = .shared, attestService: AppAttestProvider = DCAppAttestService.shared) {
         self.baseURL = baseURL
         self.session = session
+        self.attestService = attestService
     }
     
     // Helper to configure decoders with snake_case conversion support
