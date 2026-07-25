@@ -1,17 +1,14 @@
-use wasm_bindgen::JsValue;
 use worker::*;
+use wasm_bindgen::JsValue;
 
 mod models;
 use models::*;
 
 fn cors_headers() -> Result<Headers> {
     let mut headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "https://fintechnick.com")?;
+    headers.set("Access-Control-Allow-Origin", "*")?;
     headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
-    headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion",
-    )?;
+    headers.set("Access-Control-Allow-Headers", "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion")?;
     headers.set("Access-Control-Max-Age", "86400")?;
     Ok(headers)
 }
@@ -34,20 +31,11 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
     Ok(response)
 }
 
-use subtle::ConstantTimeEq;
-
 // Authentication Helpers
-fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
-    let expected_key = match env.var("ADMIN_API_KEY") {
-        Ok(k) => k.to_string(),
-        Err(_) => return Ok(false),
-    };
-    let headers = req.headers();
-    if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
-        if provided_key.len() != expected_key.len() {
-            return Ok(false);
-        }
-        return Ok(provided_key.as_bytes().ct_eq(expected_key.as_bytes()).into());
+fn check_admin_auth_logic(provided_key: Option<String>, expected_key: Option<String>) -> bool {
+    match (provided_key, expected_key) {
+        (Some(p), Some(e)) => p == e,
+        _ => false,
     }
 }
 
@@ -58,17 +46,12 @@ fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     Ok(check_admin_auth_logic(provided_key, expected_key))
 }
 
-fn validate_app_attest_auth_inner(assertion: Option<String>) -> Result<bool> {
-    if let Some(val) = assertion {
-        return Ok(!val.trim().is_empty());
-    }
-    Ok(false)
-}
-
 fn validate_app_attest_auth(req: &Request) -> Result<bool> {
     let headers = req.headers();
-    let assertion = headers.get("X-App-Attest-Assertion").unwrap_or(None);
-    validate_app_attest_auth_inner(assertion)
+    if let Ok(Some(assertion)) = headers.get("X-App-Attest-Assertion") {
+        return Ok(!assertion.trim().is_empty());
+    }
+    Ok(false)
 }
 
 #[event(fetch)]
@@ -366,7 +349,6 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             }
 
             // Log Line Items
-            let mut statements = Vec::new();
             for item in req_data.items {
                 let item_stmt = db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)");
 
@@ -381,12 +363,8 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                     Err(e) => return error_response(&format!("D1 SQL Item Binding Error: {:?}", e), 500),
                 };
 
-                statements.push(bound_item_stmt);
-            }
-
-            if !statements.is_empty() {
-                if let Err(e) = db.batch(statements).await {
-                    return error_response(&format!("D1 Items Batch Insert Error: {:?}", e), 500);
+                if let Err(e) = bound_item_stmt.run().await {
+                    return error_response(&format!("D1 Item Insert Error: {:?}", e), 500);
                 }
             }
 
@@ -413,22 +391,14 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Err(e) => return error_response(&format!("KV List Error: {:?}", e), 500),
             };
 
-            let fetch_futures = list_result.keys.iter().map(|key| {
-                let kv_store = &kv;
-                async move {
-                    if let Ok(Some(item_str)) = kv_store.get(&key.name).text().await {
-                        serde_json::from_str::<InventoryItem>(&item_str).ok()
-                    } else {
-                        None
+            let mut items = Vec::new();
+            for key in list_result.keys {
+                if let Ok(Some(item_str)) = kv.get(&key.name).text().await {
+                    if let Ok(item) = serde_json::from_str::<InventoryItem>(&item_str) {
+                        items.push(item);
                     }
                 }
-            });
-
-            let items: Vec<InventoryItem> = futures_util::future::join_all(fetch_futures)
-                .await
-                .into_iter()
-                .flatten()
-                .collect();
+            }
 
             json_response(&items)
         })
@@ -523,8 +493,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let limit = req.url()?.query_pairs()
                 .find(|(k, _)| k == "limit")
                 .map(|(_, v)| v.parse::<u32>().unwrap_or(100))
-                .unwrap_or(100)
-                .min(1000);
+                .unwrap_or(100);
 
             let offset = req.url()?.query_pairs()
                 .find(|(k, _)| k == "offset")
@@ -646,26 +615,42 @@ mod tests {
     }
 
     #[test]
-    fn test_app_attest_auth_valid() {
-        let assertion = Some("valid_assertion".to_string());
-        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), true);
+    fn test_check_admin_auth_logic_valid() {
+        assert!(check_admin_auth_logic(
+            Some("supersecret".to_string()),
+            Some("supersecret".to_string())
+        ));
     }
 
     #[test]
-    fn test_app_attest_auth_empty() {
-        let assertion = Some("".to_string());
-        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    fn test_check_admin_auth_logic_invalid() {
+        assert!(!check_admin_auth_logic(
+            Some("wrongkey".to_string()),
+            Some("supersecret".to_string())
+        ));
     }
 
     #[test]
-    fn test_app_attest_auth_whitespace() {
-        let assertion = Some("   ".to_string());
-        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    fn test_check_admin_auth_logic_missing_provided() {
+        assert!(!check_admin_auth_logic(
+            None,
+            Some("supersecret".to_string())
+        ));
     }
 
     #[test]
-    fn test_app_attest_auth_missing() {
-        let assertion = None;
-        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    fn test_check_admin_auth_logic_missing_expected() {
+        assert!(!check_admin_auth_logic(
+            Some("supersecret".to_string()),
+            None
+        ));
+    }
+
+    #[test]
+    fn test_check_admin_auth_logic_both_missing() {
+        assert!(!check_admin_auth_logic(
+            None,
+            None
+        ));
     }
 }
