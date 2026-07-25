@@ -26,7 +26,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let interceptorWindow = BarcodeInterceptorWindow(windowScene: windowScene)
         
         // Configure endpoint matching the live workers route (Phase 4 Step 4.2)
-        let backendURL = URL(string: "https://stripe-toddler.fintechnick.workers.dev")!
+        let backendURL = URL(string: "https://stripe-toddler.nick-brett1.workers.dev")!
         let api = BackendAPIClient(baseURL: backendURL)
         let terminal = StripeTerminalManager(apiClient: api)
         let viewModel = POSViewModel(apiClient: api, terminalManager: terminal)
