@@ -31,6 +31,8 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
     Ok(response)
 }
 
+use subtle::ConstantTimeEq;
+
 // Authentication Helpers
 fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     let expected_key = match env.var("ADMIN_API_KEY") {
@@ -39,7 +41,10 @@ fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     };
     let headers = req.headers();
     if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
-        return Ok(provided_key == expected_key);
+        if provided_key.len() != expected_key.len() {
+            return Ok(false);
+        }
+        return Ok(provided_key.as_bytes().ct_eq(expected_key.as_bytes()).into());
     }
     Ok(false)
 }
