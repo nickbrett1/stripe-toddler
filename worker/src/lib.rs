@@ -347,6 +347,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             }
 
             // Log Line Items
+            let mut statements = Vec::new();
             for item in req_data.items {
                 let item_stmt = db.prepare("INSERT INTO transaction_items (transaction_id, barcode, name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)");
 
@@ -361,8 +362,12 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                     Err(e) => return error_response(&format!("D1 SQL Item Binding Error: {:?}", e), 500),
                 };
 
-                if let Err(e) = bound_item_stmt.run().await {
-                    return error_response(&format!("D1 Item Insert Error: {:?}", e), 500);
+                statements.push(bound_item_stmt);
+            }
+
+            if !statements.is_empty() {
+                if let Err(e) = db.batch(statements).await {
+                    return error_response(&format!("D1 Items Batch Insert Error: {:?}", e), 500);
                 }
             }
 
