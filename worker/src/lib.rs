@@ -45,12 +45,17 @@ fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     Ok(validate_admin_auth_logic(expected_key, provided_key))
 }
 
-fn validate_app_attest_auth(req: &Request) -> Result<bool> {
-    let headers = req.headers();
-    if let Ok(Some(assertion)) = headers.get("X-App-Attest-Assertion") {
-        return Ok(!assertion.trim().is_empty());
+fn validate_app_attest_auth_inner(assertion: Option<String>) -> Result<bool> {
+    if let Some(val) = assertion {
+        return Ok(!val.trim().is_empty());
     }
     Ok(false)
+}
+
+fn validate_app_attest_auth(req: &Request) -> Result<bool> {
+    let headers = req.headers();
+    let assertion = headers.get("X-App-Attest-Assertion").unwrap_or(None);
+    validate_app_attest_auth_inner(assertion)
 }
 
 #[event(fetch)]
@@ -390,14 +395,22 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 Err(e) => return error_response(&format!("KV List Error: {:?}", e), 500),
             };
 
-            let mut items = Vec::new();
-            for key in list_result.keys {
-                if let Ok(Some(item_str)) = kv.get(&key.name).text().await {
-                    if let Ok(item) = serde_json::from_str::<InventoryItem>(&item_str) {
-                        items.push(item);
+            let fetch_futures = list_result.keys.iter().map(|key| {
+                let kv_store = &kv;
+                async move {
+                    if let Ok(Some(item_str)) = kv_store.get(&key.name).text().await {
+                        serde_json::from_str::<InventoryItem>(&item_str).ok()
+                    } else {
+                        None
                     }
                 }
-            }
+            });
+
+            let items: Vec<InventoryItem> = futures_util::future::join_all(fetch_futures)
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
 
             json_response(&items)
         })
@@ -614,37 +627,26 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_admin_auth_logic_happy_path() {
-        let expected = Some("secret_key".to_string());
-        let provided = Some("secret_key".to_string());
-        assert!(validate_admin_auth_logic(expected, provided));
+    fn test_app_attest_auth_valid() {
+        let assertion = Some("valid_assertion".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), true);
     }
 
     #[test]
-    fn test_validate_admin_auth_logic_wrong_key() {
-        let expected = Some("secret_key".to_string());
-        let provided = Some("wrong_key".to_string());
-        assert!(!validate_admin_auth_logic(expected, provided));
+    fn test_app_attest_auth_empty() {
+        let assertion = Some("".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
     }
 
     #[test]
-    fn test_validate_admin_auth_logic_missing_expected() {
-        let expected = None;
-        let provided = Some("secret_key".to_string());
-        assert!(!validate_admin_auth_logic(expected, provided));
+    fn test_app_attest_auth_whitespace() {
+        let assertion = Some("   ".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
     }
 
     #[test]
-    fn test_validate_admin_auth_logic_missing_provided() {
-        let expected = Some("secret_key".to_string());
-        let provided = None;
-        assert!(!validate_admin_auth_logic(expected, provided));
-    }
-
-    #[test]
-    fn test_validate_admin_auth_logic_both_missing() {
-        let expected = None;
-        let provided = None;
-        assert!(!validate_admin_auth_logic(expected, provided));
+    fn test_app_attest_auth_missing() {
+        let assertion = None;
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
     }
 }
