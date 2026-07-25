@@ -32,16 +32,17 @@ fn json_response<T: serde::Serialize>(data: &T) -> Result<Response> {
 }
 
 // Authentication Helpers
-fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
-    let expected_key = match env.var("ADMIN_API_KEY") {
-        Ok(k) => k.to_string(),
-        Err(_) => return Ok(false),
-    };
-    let headers = req.headers();
-    if let Ok(Some(provided_key)) = headers.get("X-Admin-API-Key") {
-        return Ok(provided_key == expected_key);
+fn validate_admin_auth_logic(expected_key: Option<String>, provided_key: Option<String>) -> bool {
+    match (expected_key, provided_key) {
+        (Some(expected), Some(provided)) => expected == provided,
+        _ => false,
     }
-    Ok(false)
+}
+
+fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
+    let expected_key = env.var("ADMIN_API_KEY").ok().map(|k| k.to_string());
+    let provided_key = req.headers().get("X-Admin-API-Key").unwrap_or(None);
+    Ok(validate_admin_auth_logic(expected_key, provided_key))
 }
 
 fn validate_app_attest_auth(req: &Request) -> Result<bool> {
@@ -610,5 +611,40 @@ mod tests {
         let deserialized: CaptureTransactionRequest = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.payment_intent_id, "pi_123");
         assert_eq!(deserialized.items[0].name, "Teddy");
+    }
+
+    #[test]
+    fn test_validate_admin_auth_logic_happy_path() {
+        let expected = Some("secret_key".to_string());
+        let provided = Some("secret_key".to_string());
+        assert!(validate_admin_auth_logic(expected, provided));
+    }
+
+    #[test]
+    fn test_validate_admin_auth_logic_wrong_key() {
+        let expected = Some("secret_key".to_string());
+        let provided = Some("wrong_key".to_string());
+        assert!(!validate_admin_auth_logic(expected, provided));
+    }
+
+    #[test]
+    fn test_validate_admin_auth_logic_missing_expected() {
+        let expected = None;
+        let provided = Some("secret_key".to_string());
+        assert!(!validate_admin_auth_logic(expected, provided));
+    }
+
+    #[test]
+    fn test_validate_admin_auth_logic_missing_provided() {
+        let expected = Some("secret_key".to_string());
+        let provided = None;
+        assert!(!validate_admin_auth_logic(expected, provided));
+    }
+
+    #[test]
+    fn test_validate_admin_auth_logic_both_missing() {
+        let expected = None;
+        let provided = None;
+        assert!(!validate_admin_auth_logic(expected, provided));
     }
 }
