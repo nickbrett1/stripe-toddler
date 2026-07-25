@@ -44,12 +44,17 @@ fn validate_admin_auth(req: &Request, env: &Env) -> Result<bool> {
     Ok(false)
 }
 
-fn validate_app_attest_auth(req: &Request) -> Result<bool> {
-    let headers = req.headers();
-    if let Ok(Some(assertion)) = headers.get("X-App-Attest-Assertion") {
-        return Ok(!assertion.trim().is_empty());
+fn validate_app_attest_auth_inner(assertion: Option<String>) -> Result<bool> {
+    if let Some(val) = assertion {
+        return Ok(!val.trim().is_empty());
     }
     Ok(false)
+}
+
+fn validate_app_attest_auth(req: &Request) -> Result<bool> {
+    let headers = req.headers();
+    let assertion = headers.get("X-App-Attest-Assertion").unwrap_or(None);
+    validate_app_attest_auth_inner(assertion)
 }
 
 #[event(fetch)]
@@ -610,5 +615,29 @@ mod tests {
         let deserialized: CaptureTransactionRequest = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.payment_intent_id, "pi_123");
         assert_eq!(deserialized.items[0].name, "Teddy");
+    }
+
+    #[test]
+    fn test_app_attest_auth_valid() {
+        let assertion = Some("valid_assertion".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), true);
+    }
+
+    #[test]
+    fn test_app_attest_auth_empty() {
+        let assertion = Some("".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    }
+
+    #[test]
+    fn test_app_attest_auth_whitespace() {
+        let assertion = Some("   ".to_string());
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
+    }
+
+    #[test]
+    fn test_app_attest_auth_missing() {
+        let assertion = None;
+        assert_eq!(validate_app_attest_auth_inner(assertion).unwrap(), false);
     }
 }
