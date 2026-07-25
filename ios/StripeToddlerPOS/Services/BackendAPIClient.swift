@@ -163,6 +163,23 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         }
     }
     
+    private func performRequest<T: Decodable>(for request: inout URLRequest, clientData: Data) async throws -> T {
+        let assertion = await generateAssertionHeader(for: clientData)
+        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw BackendAPIError.badResponse(statusCode: 0)
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
+        }
+
+        return try jsonDecoder.decode(T.self, from: data)
+    }
+
     // Generates a base64 encoded client assertion payload (Step 4.6.6)
     private func generateAssertionHeader(for clientData: Data) async -> String {
         guard attestService.isSupported, let keyId = appAttestKeyId else {
@@ -220,24 +237,12 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         
-        // Empty payload hash for connection token requests
-        let assertion = await generateAssertionHeader(for: Data())
-        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw BackendAPIError.badResponse(statusCode: 0)
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
-        }
-        
         struct TokenResponse: Decodable {
             let secret: String
         }
-        let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+
+        // Empty payload hash for connection token requests
+        let tokenResponse: TokenResponse = try await performRequest(for: &request, clientData: Data())
         return tokenResponse.secret
     }
     
@@ -256,20 +261,7 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         let bodyData = try jsonEncoder.encode(body)
         request.httpBody = bodyData
         
-        let assertion = await generateAssertionHeader(for: bodyData)
-        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw BackendAPIError.badResponse(statusCode: 0)
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
-        }
-        
-        return try jsonDecoder.decode(PaymentIntentResponse.self, from: data)
+        return try await performRequest(for: &request, clientData: bodyData)
     }
     
     public func captureTransaction(paymentIntentId: String, totalCents: Int, items: [POSInventoryItem]) async throws -> CaptureResponse {
@@ -288,19 +280,6 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         let bodyData = try jsonEncoder.encode(body)
         request.httpBody = bodyData
         
-        let assertion = await generateAssertionHeader(for: bodyData)
-        request.setValue(assertion, forHTTPHeaderField: "X-App-Attest-Assertion")
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw BackendAPIError.badResponse(statusCode: 0)
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
-        }
-        
-        return try jsonDecoder.decode(CaptureResponse.self, from: data)
+        return try await performRequest(for: &request, clientData: bodyData)
     }
 }
