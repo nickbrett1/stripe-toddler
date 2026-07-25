@@ -17,3 +17,17 @@ bucket_name = "stripe-toddler-images"
 binding = "DB"
 database_name = "stripe_toddler_analytics"
 database_id = "dd85386a-f27b-4cc0-b95a-190881f876fe"
+
+[env.preview]
+[[env.preview.kv_namespaces]]
+binding = "STRIPE_TODDLER_INVENTORY"
+id = "249c8071a8a74054ac7352d782d118bb"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "stripe-toddler-images"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "stripe_toddler_analytics"
+database_id = "dd85386a-f27b-4cc0-b95a-190881f876fe"

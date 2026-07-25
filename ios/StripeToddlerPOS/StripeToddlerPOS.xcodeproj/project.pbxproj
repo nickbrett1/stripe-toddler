@@ -43,15 +43,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0121DC6E300F902B00EFE9D5 /* StripeToddlerPOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = StripeToddlerPOS;
 			sourceTree = "<group>";
 		};
 		0121DC923010480400EFE9D5 /* StripeToddlerPOSTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = StripeToddlerPOSTests;
 			sourceTree = "<group>";
 		};
@@ -89,7 +85,6 @@
 				0121DC923010480400EFE9D5 /* StripeToddlerPOSTests */,
 				0121DC9E30104C0200EFE9D5 /* Frameworks */,
 				0121DC6D300F902B00EFE9D5 /* Products */,
-				3868BA79BB5CD6D6E8FDD7DF /* Tests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -149,14 +144,6 @@
 			children = (
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		3868BA79BB5CD6D6E8FDD7DF /* Tests */ = {
-			isa = PBXGroup;
-			children = (
-				910FCF57A06E5BC19A45675F /* BackendAPIClientTests.swift */,
-			);
-			name = Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
