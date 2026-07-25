@@ -27,6 +27,8 @@ public enum BackendAPIError: LocalizedError {
     case invalidURL
     case badResponse(statusCode: Int)
     case missingData
+    case invalidResponse
+    case itemNotFound
     
     public var errorDescription: String? {
         switch self {
@@ -36,6 +38,10 @@ public enum BackendAPIError: LocalizedError {
             return "Server returned an error status code: \(code)."
         case .missingData:
             return "The server did not send any data."
+        case .invalidResponse:
+            return "Invalid response from server."
+        case .itemNotFound:
+            return "Item not found."
         }
     }
 }
@@ -206,7 +212,11 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw BackendAPIError.badResponse(statusCode: 0)
+            throw BackendAPIError.invalidResponse
+        }
+
+        if httpResponse.statusCode == 404 {
+            throw BackendAPIError.itemNotFound
         }
         
         guard httpResponse.statusCode == 200 else {

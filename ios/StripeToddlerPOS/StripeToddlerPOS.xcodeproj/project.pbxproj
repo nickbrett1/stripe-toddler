@@ -16,7 +16,7 @@
 		0121DC9A3010493300EFE9D5 /* POSViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121DC823010479500EFE9D5 /* POSViewModelTests.swift */; };
 		0121DC9D30104BD300EFE9D5 /* StripeTerminal in Frameworks */ = {isa = PBXBuildFile; productRef = 0121DC9C30104BD300EFE9D5 /* StripeTerminal */; };
 		0121DCA030104C0200EFE9D5 /* StripeTerminal in Frameworks */ = {isa = PBXBuildFile; productRef = 0121DC9F30104C0200EFE9D5 /* StripeTerminal */; };
-		152CE9D9EEC8D443E5C98915 /* BackendAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910FCF57A06E5BC19A45675F /* BackendAPIClientTests.swift */; };
+		0121DC9A3010493300EFE9D9 /* BackendAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121DC823010479500EFE9D9 /* BackendAPIClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,7 +39,7 @@
 		0121DC823010479500EFE9D5 /* POSViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = POSViewModelTests.swift; sourceTree = "<group>"; };
 		0121DC843010479500EFE9D5 /* POSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = POSViewModel.swift; sourceTree = "<group>"; };
 		0121DC913010480400EFE9D5 /* StripeToddlerPOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StripeToddlerPOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		910FCF57A06E5BC19A45675F /* BackendAPIClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackendAPIClientTests.swift; sourceTree = "<group>"; };
+		0121DC823010479500EFE9D9 /* BackendAPIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendAPIClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -133,7 +133,8 @@
 		0121DC833010479500EFE9D5 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				0121DC823010479500EFE9D5 /* POSViewModelTests.swift */,
+								0121DC823010479500EFE9D9 /* BackendAPIClientTests.swift */,
+0121DC823010479500EFE9D5 /* POSViewModelTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -288,8 +289,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0121DC9A3010493300EFE9D5 /* POSViewModelTests.swift in Sources */,
-				152CE9D9EEC8D443E5C98915 /* BackendAPIClientTests.swift in Sources */,
+								0121DC9A3010493300EFE9D9 /* BackendAPIClientTests.swift in Sources */,
+0121DC9A3010493300EFE9D5 /* POSViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
