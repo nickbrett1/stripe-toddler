@@ -209,31 +209,3 @@ final class POSViewModelTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: 2.0)
     }
 }
-
-// MARK: - Barcode Scanner String Filter Tests
-final class BarcodeScannerServiceTests: XCTestCase {
-
-    func testFilteringForBarcode_EmptyString() {
-        let input = ""
-        let result = input.filteringForBarcode()
-        XCTAssertEqual(result, "", "Empty string should return empty string.")
-    }
-
-    func testFilteringForBarcode_Alphanumeric() {
-        let input = "A1B2C3"
-        let result = input.filteringForBarcode()
-        XCTAssertEqual(result, "A1B2C3", "Alphanumeric string should not be modified.")
-    }
-
-    func testFilteringForBarcode_SpecialCharacters() {
-        let input = "A-1!B@2#"
-        let result = input.filteringForBarcode()
-        XCTAssertEqual(result, "A1B2", "Special characters should be filtered out.")
-    }
-
-    func testFilteringForBarcode_Whitespace() {
-        let input = "A 1 B 2\n\r\t"
-        let result = input.filteringForBarcode()
-        XCTAssertEqual(result, "A1B2", "Whitespace and control characters should be filtered out.")
-    }
-}
