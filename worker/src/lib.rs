@@ -1,5 +1,5 @@
-use worker::*;
 use wasm_bindgen::JsValue;
+use worker::*;
 
 mod models;
 use models::*;
@@ -8,7 +8,10 @@ fn cors_headers() -> Result<Headers> {
     let mut headers = Headers::new();
     headers.set("Access-Control-Allow-Origin", "*")?;
     headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion")?;
+    headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Admin-API-Key, X-App-Attest-Assertion",
+    )?;
     headers.set("Access-Control-Max-Age", "86400")?;
     Ok(headers)
 }
@@ -76,7 +79,7 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
                 .map_err(|e| e)?
                 .expiration_ttl(300)
                 .execute()
-                .await 
+                .await
             {
                 return error_response(&format!("KV Put Error: {:?}", e), 500);
             }
@@ -491,7 +494,8 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             let limit = req.url()?.query_pairs()
                 .find(|(k, _)| k == "limit")
                 .map(|(_, v)| v.parse::<u32>().unwrap_or(100))
-                .unwrap_or(100);
+                .unwrap_or(100)
+                .min(1000);
 
             let offset = req.url()?.query_pairs()
                 .find(|(k, _)| k == "offset")
