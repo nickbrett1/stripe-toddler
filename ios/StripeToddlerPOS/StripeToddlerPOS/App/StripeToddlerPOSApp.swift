@@ -1,68 +1,52 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Barcode Interceptor UIWindow (Rule 10 Keyboard Wedge Interceptor)
-final class BarcodeInterceptorWindow: UIWindow {
-    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        for press in presses {
-            BarcodeScannerService.shared.handlePress(press)
+// MARK: - Keyboard Wedge Barcode Interceptor View
+struct BarcodeInterceptorRepresentable: UIViewRepresentable {
+    func makeUIView(context: Context) -> BarcodeInterceptorUIView {
+        let view = BarcodeInterceptorUIView()
+        DispatchQueue.main.async {
+            view.becomeFirstResponder()
         }
-        super.pressesBegan(presses, with: event)
+        return view
     }
-}
 
-// MARK: - Scene Delegate for Custom Window Setup
-final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-    var window: UIWindow?
+    func updateUIView(_ uiView: BarcodeInterceptorUIView, context: Context) {}
 
-    func scene(
-        _ scene: UIScene,
-        willConnectTo session: UISceneSession,
-        options connectionOptions: UIScene.ConnectionOptions
-    ) {
-        guard let windowScene = scene as? UIWindowScene else { return }
-        
-        // Instantiate the window with global keyboard presses interceptor
-        let interceptorWindow = BarcodeInterceptorWindow(windowScene: windowScene)
-        
-        // Configure endpoint matching the live workers route (Phase 4 Step 4.2)
-        let backendURL = URL(string: "https://stripe-toddler.nick-brett1.workers.dev")!
-        let api = BackendAPIClient(baseURL: backendURL)
-        let terminal = StripeTerminalManager(apiClient: api)
-        let viewModel = POSViewModel(apiClient: api, terminalManager: terminal)
-        
-        // Inject dependencies into root view
-        let rootViewController = UIHostingController(
-            rootView: CheckoutView(viewModel: viewModel)
-        )
-        
-        interceptorWindow.rootViewController = rootViewController
-        self.window = interceptorWindow
-        interceptorWindow.makeKeyAndVisible()
-    }
-}
+    final class BarcodeInterceptorUIView: UIView {
+        override var canBecomeFirstResponder: Bool { true }
 
-// MARK: - Application Delegate
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
-        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
-        configuration.delegateClass = SceneDelegate.self
-        return configuration
+        override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+            for press in presses {
+                BarcodeScannerService.shared.handlePress(press)
+            }
+            super.pressesBegan(presses, with: event)
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            becomeFirstResponder()
+        }
     }
 }
 
 // MARK: - App Entry Point
 @main
 struct StripeToddlerPOSApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+    @StateObject private var viewModel: POSViewModel
+
+    init() {
+        let backendURL = URL(string: "https://stripe-toddler.nick-brett1.workers.dev")!
+        let api = BackendAPIClient(baseURL: backendURL)
+        let terminal = StripeTerminalManager(apiClient: api)
+        let vm = POSViewModel(apiClient: api, terminalManager: terminal)
+        _viewModel = StateObject(wrappedValue: vm)
+    }
+
     var body: some Scene {
         WindowGroup {
-            Color.clear
+            CheckoutView(viewModel: viewModel)
+                .background(BarcodeInterceptorRepresentable())
         }
     }
 }
