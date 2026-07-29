@@ -29,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0103C93F301997C600152082 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0121DC6C300F902B00EFE9D5 /* StripeToddlerPOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StripeToddlerPOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0121DC7A3010479500EFE9D5 /* ToddlerDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToddlerDesignSystem.swift; sourceTree = "<group>"; };
 		0121DC7C3010479500EFE9D5 /* POSModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = POSModels.swift; sourceTree = "<group>"; };
@@ -85,6 +86,7 @@
 				0121DC923010480400EFE9D5 /* StripeToddlerPOSTests */,
 				0121DC9E30104C0200EFE9D5 /* Frameworks */,
 				0121DC6D300F902B00EFE9D5 /* Products */,
+				0103C93F301997C600152082 /* Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -424,9 +426,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = (
-					"bluetooth-central",
-				);
+				INFOPLIST_KEY_UIBackgroundModes = "bluetooth-central";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -467,9 +467,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = (
-					"bluetooth-central",
-				);
+				INFOPLIST_KEY_UIBackgroundModes = "bluetooth-central";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
