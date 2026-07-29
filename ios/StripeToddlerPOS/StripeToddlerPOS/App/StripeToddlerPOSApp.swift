@@ -17,11 +17,13 @@ struct BarcodeInterceptorRepresentable: UIViewRepresentable {
         override init(frame: CGRect) {
             super.init(frame: frame)
             backgroundColor = .clear
+            isUserInteractionEnabled = false
         }
 
         required init?(coder: NSCoder) {
             super.init(coder: coder)
             backgroundColor = .clear
+            isUserInteractionEnabled = false
         }
 
         override var canBecomeFirstResponder: Bool { true }
@@ -49,14 +51,13 @@ struct StripeToddlerPOSApp: App {
         let backendURL = URL(string: "https://stripe-toddler.nick-brett1.workers.dev")!
         let api = BackendAPIClient(baseURL: backendURL)
         let terminal = StripeTerminalManager(apiClient: api)
-        let vm = POSViewModel(apiClient: api, terminalManager: terminal)
-        _viewModel = StateObject(wrappedValue: vm)
+        _viewModel = StateObject(wrappedValue: POSViewModel(apiClient: api, terminalManager: terminal))
     }
 
     var body: some Scene {
         WindowGroup {
             CheckoutView(viewModel: viewModel)
-                .background(BarcodeInterceptorRepresentable())
+                .overlay(BarcodeInterceptorRepresentable().frame(width: 0, height: 0).allowsHitTesting(false))
         }
     }
 }
