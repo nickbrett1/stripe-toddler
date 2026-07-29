@@ -56,7 +56,9 @@ struct CheckoutView: View {
                 // Active workspace layout
                 switch viewModel.state {
                 case .waitingForScan:
-                    WaitingForScanView()
+                    WaitingForScanView(onScanBarcode: { barcode in
+                        viewModel.handleBarcodeScanned(barcode)
+                    })
                     
                 case .cartActive(let items, let totalCents):
                     CartView(
