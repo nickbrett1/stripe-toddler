@@ -422,11 +422,9 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Stripe Toddler";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
-				INFOPLIST_KEY_UIBackgroundModes = (
-					"bluetooth-central",
-				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes_0 = "bluetooth-central";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -465,11 +463,9 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Stripe Toddler";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.";
-				INFOPLIST_KEY_UIBackgroundModes = (
-					"bluetooth-central",
-				);
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes_0 = "bluetooth-central";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
