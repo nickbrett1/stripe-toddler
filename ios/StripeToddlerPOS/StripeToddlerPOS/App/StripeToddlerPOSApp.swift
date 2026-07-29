@@ -14,6 +14,16 @@ struct BarcodeInterceptorRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: BarcodeInterceptorUIView, context: Context) {}
 
     final class BarcodeInterceptorUIView: UIView {
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            backgroundColor = .clear
+        }
+
+        required init?(coder: NSCoder) {
+            super.init(coder: coder)
+            backgroundColor = .clear
+        }
+
         override var canBecomeFirstResponder: Bool { true }
 
         override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
