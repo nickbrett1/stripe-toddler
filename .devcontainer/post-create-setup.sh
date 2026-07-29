@@ -113,6 +113,109 @@ elif [ -f "scripts/install-nanobanana.sh" ]; then
     bash scripts/install-nanobanana.sh
 fi
 
+echo "INFO: Generating goose configuration with MCP servers from .agents/mcp_config.json..."
+mkdir -p "$USER_HOME_DIR/.config/goose"
+
+# Build goose config.yaml with MCP servers from the project's agy MCP config
+goose_config="$USER_HOME_DIR/.config/goose/config.yaml"
+
+cat > "$goose_config" << 'GOOSE_EOF'
+# Goose configuration generated from project .agents/mcp_config.json
+# Managed by .devcontainer/post-create-setup.sh - do not edit manually
+
+# LLM Provider loaded from Doppler (goose project, prd config) via goose-dev alias
+active_provider: litellm
+providers:
+  litellm:
+    enabled: true
+    model: deepseek-v4-flash
+    configured: true
+GOOSE_TELEMETRY_ENABLED: true
+GOOSE_MODE: auto
+
+extensions:
+  # Built-in extensions
+  developer:
+    type: builtin
+    name: developer
+    enabled: true
+    bundled: true
+    timeout: 300
+
+  # Remote MCP servers (streamable HTTP)
+  svelte:
+    type: streamable_http
+    name: svelte
+    enabled: true
+    uri: "https://mcp.svelte.dev/mcp"
+    timeout: 300
+
+  # Local MCP servers (stdio)
+  chrome-devtools:
+    type: stdio
+    name: chrome-devtools
+    enabled: true
+    cmd: npx
+    args: ["-y", "chrome-devtools-mcp"]
+    timeout: 300
+
+  fintechnick:
+    type: stdio
+    name: fintechnick
+    enabled: true
+    cmd: sh
+    args: ["-c", "npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
+    timeout: 300
+
+  # Xcode via SSE proxy to remote Mac
+  xcode-native:
+    type: stdio
+    name: xcode-native
+    enabled: true
+    cmd: node
+    args: ["/workspaces/stripe-toddler/.agents/mcp-sse-proxy.cjs", "http://mac-studio:9876/sse"]
+    timeout: 300
+
+  # Doppler-aware MCP servers (inherit secrets from goose-dev wrapper)
+  sonarqube:
+    type: stdio
+    name: sonarqube
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "sonarqube-mcp-server"]
+    timeout: 300
+
+  circleci:
+    type: stdio
+    name: circleci
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "@circleci/mcp-server-circleci"]
+    timeout: 300
+
+  github:
+    type: stdio
+    name: github
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "@modelcontextprotocol/server-github"]
+    timeout: 300
+
+  doppler:
+    type: stdio
+    name: doppler
+    enabled: true
+    cmd: sh
+    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain) npx -y @dopplerhq/mcp-server"]
+    timeout: 300
+GOOSE_EOF
+
+# Replace $FINTECHNICK_MCP in the config with the actual env var syntax for goose
+# (Goose envs should be literal, the sh -c will resolve them at runtime)
+sudo chown "$CURRENT_USER:$CURRENT_USER" "$goose_config"
+
+echo "INFO: goose config.yaml generated at $goose_config"
+
 echo -e "\nINFO: Custom container setup script finished."
 echo -e "\n⚠️  To complete cloud login, run:"
 echo "    cd /workspaces/stripe-toddler && bash scripts/cloud_login.sh"
