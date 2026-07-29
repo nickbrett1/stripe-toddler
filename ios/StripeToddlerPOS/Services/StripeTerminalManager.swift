@@ -56,17 +56,18 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
     }
     
     private let apiClient: BackendAPIClientProtocol
+    private let tokenProvider: ConnectionTokenProvider
     private var discoveryCancelable: Cancelable?
     
     public init(apiClient: BackendAPIClientProtocol) {
         self.apiClient = apiClient
+        self.tokenProvider = StripeConnectionTokenProvider(apiClient: apiClient)
         super.init()
         
         // Register token provider if not already set
         if !Terminal.isInitialized() {
-            let tokenProvider: ConnectionTokenProvider = StripeConnectionTokenProvider(apiClient: apiClient)
             Terminal.initWithTokenProvider(
-                tokenProvider,
+                self.tokenProvider,
                 delegate: self,
                 offlineDelegate: self,
                 logLevel: .none
