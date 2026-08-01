@@ -1,10 +1,25 @@
 FROM mcr.microsoft.com/devcontainers/rust:1-bookworm
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends git socat curl gnupg nodejs npm openssh-server mosh tmux micro xclip \
+    && apt-get -y install --no-install-recommends git socat curl gnupg nodejs npm openssh-server mosh micro libevent-dev libncurses-dev pkg-config bison build-essential xclip \
+    && curl -LsSf https://astral.sh/uv/install.sh | env CARGO_HOME=/usr/local UV_INSTALL_DIR=/usr/local/bin sh \
     && curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list \
     && apt-get update && apt-get install -y doppler
 
+
+# Build a current tmux from source (Debian bookworm's apt tmux is old).
+# Bump TMUX_VERSION (and TMUX_SHA256) to keep tmux up to date.
+ARG TMUX_VERSION=3.7b
+ARG TMUX_SHA256=87f2e99e3b685973f2ca002ffd6ed7e51a5744f7009daae5a15670b6d532db96
+RUN curl -fsSL -o /tmp/tmux.tar.gz "https://github.com/tmux/tmux/releases/download/${TMUX_VERSION}/tmux-${TMUX_VERSION}.tar.gz" \
+    && echo "${TMUX_SHA256}  /tmp/tmux.tar.gz" | sha256sum -c - \
+    && mkdir -p /tmp/tmux-src \
+    && tar -xzf /tmp/tmux.tar.gz -C /tmp/tmux-src --strip-components=1 \
+    && cd /tmp/tmux-src \
+    && ./configure --prefix=/usr/local \
+    && make -j"$(nproc)" \
+    && make install \
+    && rm -rf /tmp/tmux.tar.gz /tmp/tmux-src
 USER vscode
 
 RUN if [ -d "$HOME/.oh-my-zsh" ]; then rm -rf "$HOME/.oh-my-zsh"; fi \
@@ -13,6 +28,8 @@ RUN if [ -d "$HOME/.oh-my-zsh" ]; then rm -rf "$HOME/.oh-my-zsh"; fi \
     && git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions \
     && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $HOME/.oh-my-zsh/custom/themes/powerlevel10k \
     && curl https://cursor.com/install -fsS | bash \
+    && uv tool install --python 3.11 git+https://github.com/github/spec-kit.git \
+    && curl -fsSL https://antigravity.google/cli/install.sh | bash \
     && curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash
 
 RUN mkdir -p $HOME/.wrangler
