@@ -1,11 +1,19 @@
 version: 2
 updates:
+  # GitHub Actions Workflow Dependencies
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
 
+  # Rust Cloudflare Worker Dependencies
   - package-ecosystem: "cargo"
-    directory: "/"
+    directory: "/worker"
+    schedule:
+      interval: "weekly"
+
+  # iOS Swift Package Manager Dependencies
+  - package-ecosystem: "swift"
+    directory: "/ios/StripeToddlerPOS"
     schedule:
       interval: "weekly"
