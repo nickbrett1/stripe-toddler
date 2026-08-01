@@ -20,7 +20,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-	"devDependencies": {
-		"wrangler": "^3.57.0"
-	}
+  "devDependencies": {
+    "wrangler": "^3.57.0",
+    "simple-git-hooks": "^2.11.1",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "eslint": "^9.11.0"
+  }
 }
