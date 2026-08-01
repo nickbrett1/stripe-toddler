@@ -75,6 +75,18 @@ jobs:
             - node_modules
           key: v1-deps-{{ checksum "package.json" }}
       - install_doppler
+      - restore_cache:
+          keys:
+            - v1-cargo-{{ checksum "worker/Cargo.lock" }}
+            - v1-cargo-
+      - run:
+          name: Install Rust Toolchain
+          command: |
+            if ! command -v cargo &> /dev/null; then
+              curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
+            fi
+            export PATH="$HOME/.cargo/bin:$PATH"
+            cargo --version
       - run:
           name: Setup Wrangler Config
           environment:
@@ -110,6 +122,11 @@ jobs:
                 echo "⚠️  Warning: Failed to sync secrets to Cloudflare preview."
               fi
             fi
+      - save_cache:
+          key: v1-cargo-{{ checksum "worker/Cargo.lock" }}
+          paths:
+            - ~/.cargo
+            - worker/target
 workflows:
   build-and-test:
     jobs:
