@@ -60,11 +60,42 @@ echo "INFO: Ensuring gemini directory permissions..."
 mkdir -p "$USER_HOME_DIR/.gemini"
 sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.gemini"
 
+echo "INFO: Creating Oh My Zsh custom directories..."
+mkdir -p "$USER_HOME_DIR/.oh-my-zsh/custom/themes" "$USER_HOME_DIR/.oh-my-zsh/custom/plugins"
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.zshrc" ]; then
+    echo "INFO: Copying .zshrc to $USER_HOME_DIR/.zshrc"
+    cp "/workspaces/stripe-toddler/.devcontainer/.zshrc" "$USER_HOME_DIR/.zshrc"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.zshrc"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.zshrc not found, skipping copy."
+fi
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.p10k.zsh" ]; then
+    echo "INFO: Copying .p10k.zsh to $USER_HOME_DIR/.p10k.zsh"
+    cp "/workspaces/stripe-toddler/.devcontainer/.p10k.zsh" "$USER_HOME_DIR/.p10k.zsh"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.p10k.zsh"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.p10k.zsh not found, skipping copy."
+fi
+
+if [ -f "/workspaces/stripe-toddler/.devcontainer/.tmux.conf" ]; then
+    echo "INFO: Copying .tmux.conf to $USER_HOME_DIR/.tmux.conf"
+    cp "/workspaces/stripe-toddler/.devcontainer/.tmux.conf" "$USER_HOME_DIR/.tmux.conf"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.tmux.conf"
+else
+    echo "INFO: /workspaces/stripe-toddler/.devcontainer/.tmux.conf not found, skipping copy."
+fi
+
+
+
 
 
 
 echo "INFO: Configuring git safe directory..."
 git config --global --add safe.directory /workspaces/stripe-toddler
+
+
 
 
 
@@ -86,6 +117,90 @@ sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.agy"
 
 echo "INFO: Installing agy-telemetry hook..."
 curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py | python3
+
+echo "INFO: Setting up goose configuration and MCP servers..."
+
+# Create goose config directory
+mkdir -p "$HOME/.config/goose"
+
+# Write goose config with MCP server extensions
+cat > "$HOME/.config/goose/config.yaml" << 'GOOSECFGEOF'
+extensions:
+  # Built-in goose extensions
+  developer:
+    type: builtin
+    name: developer
+    enabled: true
+    bundled: true
+    timeout: 300
+  # Svelte MCP - Streamable HTTP
+  svelte:
+    type: streamable_http
+    name: svelte
+    enabled: true
+    uri: "https://mcp.svelte.dev/mcp"
+    timeout: 300
+  # Memos MCP
+  memos:
+    type: stdio
+    name: memos
+    enabled: true
+    cmd: node
+    args: [".agents/mcp-streamable-http-proxy.cjs", "http://nas:5230/mcp"]
+    timeout: 300
+  # Chrome DevTools MCP
+  chrome-devtools:
+    type: stdio
+    name: chrome-devtools
+    enabled: true
+    cmd: npx
+    args: ["-y", "chrome-devtools-mcp"]
+    timeout: 300
+  # Fintechnick MCP
+  fintechnick:
+    type: stdio
+    name: fintechnick
+    enabled: true
+    cmd: sh
+    args: ["-c", "npx -y mcp-remote https://www.fintechnick.com/api/mcp --header "Authorization: Bearer $FINTECHNICK_MCP""]
+    envs:
+      FINTECHNICK_MCP: $FINTECHNICK_MCP
+    timeout: 300
+  # GitHub MCP Server (via doppler for token)
+  github:
+    type: stdio
+    name: github
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "@modelcontextprotocol/server-github"]
+    timeout: 300
+  # Doppler MCP Server
+  doppler:
+    type: stdio
+    name: doppler
+    enabled: true
+    cmd: sh
+    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain) npx -y @dopplerhq/mcp-server"]
+    timeout: 300
+  # Optional MCP servers
+  sonarqube:
+    type: stdio
+    name: sonarqube
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "sonarqube-mcp-server"]
+    timeout: 300
+  circleci:
+    type: stdio
+    name: circleci
+    enabled: true
+    cmd: doppler
+    args: ["run", "--", "npx", "-y", "@circleci/mcp-server-circleci"]
+    timeout: 300
+GOOSECFGEOF
+
+echo "INFO: goose configuration complete."
+
 
 echo "INFO: Installing specdag globally..."
 npm install -g @japorto100/specdag

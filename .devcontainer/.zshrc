@@ -157,7 +157,6 @@ agy-dev() {
   # --forward-signals ensures SIGINT/SIGTERM are correctly passed through to agy.
   doppler run --project common --config dev -- doppler run --forward-signals --project stripe-toddler --config dev -- agy "$@"
 }
-
 # A robust function to run goose with Doppler, ensuring all secrets are available.
 # Secrets are loaded from the 'common' project first, then the 'goose' project's secrets layer on
 # top (project-specific secrets take precedence over common ones).

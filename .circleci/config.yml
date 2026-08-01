@@ -2,7 +2,6 @@ version: 2.1
 orbs:
   node: circleci/node@5.0.2
   ggshield: gitguardian/ggshield@1
-  sonarcloud: sonarsource/sonarcloud@4.0.0
 
 commands:
   install_doppler:
@@ -43,18 +42,13 @@ jobs:
             chmod +x scripts/setup-wrangler-config.sh
             ./scripts/setup-wrangler-config.sh
       - run:
-          name: Export SonarCloud Token
-          command: echo "export SONAR_TOKEN=\$SONARQUBE_TOKEN" >> $BASH_ENV
-      - run:
           name: Build
           command: npm run build
-      - sonarcloud/scan
 
 
 
   deploy-to-cloudflare:
-    docker:
-      - image: cimg/rust:1.90.0-node
+    executor: node/default
     parameters:
       environment:
         type: string
@@ -68,10 +62,6 @@ jobs:
           keys:
             - v1-deps-{{ checksum "package.json" }}
             - v1-deps-
-      - restore_cache:
-          keys:
-            - v1-cargo-{{ checksum "worker/Cargo.toml" }}
-            - v1-cargo-
       - run:
           name: Install Packages
           command: |
@@ -84,17 +74,6 @@ jobs:
           paths:
             - node_modules
           key: v1-deps-{{ checksum "package.json" }}
-      - run:
-          name: Install worker-build
-          command: |
-            if ! command -v worker-build &> /dev/null; then
-              cargo install --git https://github.com/cloudflare/workers-rs --tag v0.8.5 --locked worker-build
-            fi
-      - save_cache:
-          paths:
-            - ~/.cargo
-            - worker/target
-          key: v1-cargo-{{ checksum "worker/Cargo.toml" }}
       - install_doppler
       - run:
           name: Setup Wrangler Config

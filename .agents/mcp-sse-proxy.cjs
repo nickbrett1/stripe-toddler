@@ -8,10 +8,15 @@ console.error(`[Proxy] Starting SSE proxy. Target SSE: ${sseUrlStr}`);
 let postUrl = null;
 const messageQueue = [];
 
-// Prevent client initialization hang by exiting if handshake is not completed within 5 seconds
-const handshakeTimeout = setTimeout(() => {
+// Strict 5-second handshake timeout when the proxy starts up.
+// If no initialization response is received within 5 seconds (backend offline/hung/needs approval),
+// the proxy process prints an error to stderr and exits with code 1.
+let handshakeTimeout = setTimeout(() => {
   console.error(
-    "[Proxy] Error: Initialization handshake timeout (5s) reached. Exiting to prevent client hang. Check Xcode/remote connection."
+    "[Proxy] Error: Handshake timeout. No JSON-RPC initialization response received within 5 seconds.",
+  );
+  console.error(
+    "[Proxy] The backend Xcode server may be offline, hung, or waiting for permission.",
   );
   process.exit(1);
 }, 5000);
@@ -126,10 +131,29 @@ function connectSSE() {
           } else if (eventType === "message" || eventType === "") {
             if (data) {
               if (data.includes("SSE Connection established")) {
-                console.error(`[Proxy] Gateway notification: ${data}`);
+                console.error(`[Proxy] Intercepted gateway notification: ${data}`);
               } else {
-                clearTimeout(handshakeTimeout);
                 process.stdout.write(data + "\n");
+                if (handshakeTimeout) {
+                  try {
+                    const parsed = JSON.parse(data);
+                    if (
+                      parsed &&
+                      parsed.jsonrpc === "2.0" &&
+                      parsed.id !== undefined &&
+                      parsed.result &&
+                      parsed.result.capabilities
+                    ) {
+                      console.error(
+                        "[Proxy] Handshake successful. Clearing timeout safeguard.",
+                      );
+                      clearTimeout(handshakeTimeout);
+                      handshakeTimeout = null;
+                    }
+                  } catch (e) {
+                    // Not a valid JSON-RPC initialization response, keep the timeout running
+                  }
+                }
               }
             }
           }
