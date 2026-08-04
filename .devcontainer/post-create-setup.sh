@@ -7,6 +7,19 @@
 CURRENT_USER=$(whoami)
 USER_HOME_DIR="$HOME"
 
+echo "INFO: Ensuring login shell is zsh for $CURRENT_USER..."
+if [ -x /usr/bin/zsh ]; then
+    CURRENT_SHELL=$(getent passwd "$CURRENT_USER" | cut -d: -f7)
+    if [ "$CURRENT_SHELL" != "/usr/bin/zsh" ]; then
+        sudo chsh -s /usr/bin/zsh "$CURRENT_USER"
+        echo "INFO: Login shell changed from $CURRENT_SHELL to /usr/bin/zsh."
+    else
+        echo "INFO: Login shell is already /usr/bin/zsh."
+    fi
+else
+    echo "WARN: /usr/bin/zsh not found; skipping login shell change."
+fi
+
 echo "INFO: Ensuring wrangler directory permissions..."
 
 echo "INFO: Restoring or backing up SSH host keys..."

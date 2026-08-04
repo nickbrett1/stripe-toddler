@@ -64,4 +64,8 @@ RUN chown -R vscode:vscode /home/vscode/.ssh \
     && chmod 700 /home/vscode/.ssh \
     && chmod 600 /home/vscode/.ssh/authorized_keys
 
+# Ensure zsh is the login shell for the vscode user, baked into the image so it
+# survives container rebuilds regardless of feature ordering or oh-my-zsh state.
+RUN chsh -s /usr/bin/zsh vscode
+
 USER vscode
