@@ -123,7 +123,8 @@ struct CheckoutView: View {
             // Error Overlay (Rule 9.1 / Phase 3 Step 3.10)
             if case .error(let message) = viewModel.state {
                 ErrorView(message: message) {
-                    viewModel.resetPOS()
+                    // Return to the cart instead of wiping the session
+                    viewModel.dismissError()
                 }
                 .transition(.opacity)
             }

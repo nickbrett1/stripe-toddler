@@ -113,6 +113,18 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         ToddlerHaptic.play(ToddlerHapticStyle.medium)
     }
     
+    /// Dismiss the current error overlay and return to the cart (if items are
+    /// still cached) instead of wiping the session and bouncing back to the
+    /// landing screen. E.g. a reader sync failure at checkout should drop the
+    /// shopper back into their basket, not erase it.
+    public func dismissError() {
+        if cachedCartItems.isEmpty {
+            state = .waitingForScan
+        } else {
+            state = .cartActive(items: cachedCartItems, totalCents: cachedCartTotal)
+        }
+    }
+    
     // MARK: - BarcodeScannerDelegate
     public func didScanBarcode(_ barcode: ScannedBarcode) {
         handleBarcodeScanned(barcode.value)

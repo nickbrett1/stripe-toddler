@@ -208,4 +208,38 @@ final class POSViewModelTests: XCTestCase {
         
         await fulfillment(of: [expectation], timeout: 2.0)
     }
+    
+    func testDismissErrorReturnsToCart() async {
+        let expectation = XCTestExpectation(description: "Error dismissal returns to cart")
+        
+        viewModel.handleBarcodeScanned("TOY001")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Force the reader-sync (PaymentIntent) step to fail
+            self.apiClient.createPIResult = .failure(BackendAPIError.badResponse(statusCode: 500))
+            self.viewModel.startCheckout()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard case .error = self.viewModel.state else {
+                XCTFail("State is not error")
+                expectation.fulfill()
+                return
+            }
+            
+            // Dismissing the error should return to the cart, not the landing page
+            self.viewModel.dismissError()
+            guard case .cartActive(let items, let totalCents) = self.viewModel.state else {
+                XCTFail("State is not cartActive after dismiss")
+                expectation.fulfill()
+                return
+            }
+            XCTAssertEqual(items.count, 1)
+            XCTAssertEqual(items.first?.barcode, "TOY001")
+            XCTAssertEqual(totalCents, 500)
+            expectation.fulfill()
+        }
+        
+        await fulfillment(of: [expectation], timeout: 2.0)
+    }
 }
