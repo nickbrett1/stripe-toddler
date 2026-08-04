@@ -18,6 +18,7 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
     @Published public private(set) var state: POSFlowState = .waitingForScan
     @Published public var scannerConnected: Bool = true
     @Published public private(set) var readerConnected: Bool = false
+    @Published public var isTestModeEnabled: Bool = false
     
     private let apiClient: BackendAPIClientProtocol
     private let terminalManager: StripeTerminalManagerProtocol

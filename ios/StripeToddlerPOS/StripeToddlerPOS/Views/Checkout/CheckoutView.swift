@@ -56,14 +56,21 @@ struct CheckoutView: View {
                 // Active workspace layout
                 switch viewModel.state {
                 case .waitingForScan:
-                    WaitingForScanView(onScanBarcode: { barcode in
-                        viewModel.handleBarcodeScanned(barcode)
-                    })
+                    WaitingForScanView(
+                        showTestModeButtons: viewModel.isTestModeEnabled,
+                        onScanBarcode: { barcode in
+                            viewModel.handleBarcodeScanned(barcode)
+                        }
+                    )
                     
                 case .cartActive(let items, let totalCents):
                     CartView(
                         items: items,
                         totalCents: totalCents,
+                        showTestModeButtons: viewModel.isTestModeEnabled,
+                        onAddTestItem: { barcode in
+                            viewModel.handleBarcodeScanned(barcode)
+                        },
                         onRemoveItem: { index in
                             viewModel.removeItem(at: index)
                         },
@@ -159,7 +166,7 @@ struct CheckoutView: View {
     }
 }
 
-// Dummy Admin settings panel for simulation / testing barcode injection
+// Admin settings panel for simulation, hardware status, and test controls
 struct AdminSettingsView: View {
     @ObservedObject var viewModel: POSViewModel
     @Environment(\.dismiss) var dismiss
@@ -168,6 +175,16 @@ struct AdminSettingsView: View {
     var body: some View {
         NavigationView {
             Form {
+                Section(header: Text("Simulator & Testing Controls")) {
+                    Toggle("Enable Test Mode Barcode Buttons", isOn: $viewModel.isTestModeEnabled)
+                    
+                    if viewModel.isTestModeEnabled {
+                        Text("Shows the quick-add test bar (Fire Truck, Blocks, Teddy Bear, Add 4 Sample Toys) at the top of the cart for testing without a physical barcode scanner.")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
                 Section(header: Text("Simulated Scan Input")) {
                     TextField("Enter Barcode (e.g. TOY001)", text: $barcodeInput)
                         .keyboardType(.asciiCapable)

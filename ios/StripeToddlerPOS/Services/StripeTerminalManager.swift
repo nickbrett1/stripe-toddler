@@ -88,8 +88,11 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
         discoveryCancelable = Terminal.shared.discoverReaders(config, delegate: self) { [weak self] error in
             guard let self = self else { return }
             if let error = error {
+                // Startup reader discovery failure should NOT block the POS landing screen.
+                // The top-bar reader icon reflects the disconnected state, and scanning +
+                // cart remain fully usable. Payment-time failures still surface via
+                // didEncounterError inside collectPayment().
                 self.connectionState = .disconnected
-                self.delegate?.terminalManager(self, didEncounterError: error)
             }
         }
     }
@@ -160,8 +163,9 @@ public final class StripeTerminalManager: NSObject, StripeTerminalManagerProtoco
             guard let self = self else { return }
             
             if let error = error {
+                // Same non-blocking treatment as startup discovery: a reader that fails to
+                // connect just leaves the top-bar icon gray instead of blocking the UI.
                 self.connectionState = .disconnected
-                self.delegate?.terminalManager(self, didEncounterError: error)
             } else if let reader = connectedReader {
                 self.connectionState = .connected(
                     readerName: reader.label ?? "Stripe Reader M2",

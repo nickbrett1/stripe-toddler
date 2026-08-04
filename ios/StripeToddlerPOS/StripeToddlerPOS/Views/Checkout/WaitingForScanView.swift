@@ -1,101 +1,106 @@
 import SwiftUI
 
 struct WaitingForScanView: View {
+    var showTestModeButtons: Bool = false
     var onScanBarcode: ((String) -> Void)?
-    @State private var pulse = false
     
     var body: some View {
-        VStack(spacing: ToddlerLayout.gridUnit * 4) {
-            Spacer()
-            
-            VStack(spacing: 24) {
-                // Pulsing Cart Icon in glowing card
-                ZStack {
-                    Circle()
-                        .fill(Color.toddlerBlue.opacity(0.12))
-                        .frame(width: 180, height: 180)
-                        .scaleEffect(pulse ? 1.10 : 0.95)
-                        .animation(
-                            .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                            value: pulse
-                        )
+        GeometryReader { geometry in
+            VStack(spacing: 20) {
+                // Top Headline Banner for Toddler
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.toddlerYellow)
                     
-                    Image(systemName: "cart.badge.plus")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 90, height: 90)
-                        .foregroundColor(.toddlerBlue)
-                }
-                
-                VStack(spacing: 8) {
                     Text("Ready to Scan!")
-                        .font(.system(size: 36, weight: .heavy, design: .rounded))
+                        .font(.system(size: 44, weight: .black, design: .rounded))
                         .foregroundColor(.toddlerText)
                     
-                    Text("Scan a barcode with your scanner or tap a test item below:")
-                        .font(.system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundColor(.toddlerTextSecondary)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.toddlerYellow)
                 }
+                .padding(.top, 16)
                 
-                // Quick Test Barcode Buttons
-                if let onScanBarcode = onScanBarcode {
-                    HStack(spacing: 16) {
+                // Massive Hero Tera Scanner Image
+                Image("ScannerHero")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: geometry.size.height * (showTestModeButtons ? 0.68 : 0.78))
+                    .clipShape(RoundedRectangle(cornerRadius: 36))
+                    .shadow(color: Color.black.opacity(0.14), radius: 24, x: 0, y: 12)
+                    .padding(.horizontal, 32)
+                
+                // Quick Test Barcode Tap Buttons (Only visible if Test Mode toggle is ON)
+                if showTestModeButtons, let onScanBarcode = onScanBarcode {
+                    HStack(spacing: 24) {
                         Button(action: { onScanBarcode("TOY001") }) {
-                            HStack {
+                            HStack(spacing: 12) {
                                 Image(systemName: "barcode")
-                                Text("TOY001 ($5.00)")
+                                    .font(.system(size: 26, weight: .bold))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Fire Truck ($5)")
+                                        .font(.system(size: 20, weight: .black, design: .rounded))
+                                    Text("Barcode: TOY001")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .opacity(0.85)
+                                }
                             }
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 72)
                             .background(Color.toddlerBlue)
                             .foregroundColor(.white)
-                            .cornerRadius(16)
+                            .cornerRadius(22)
+                            .shadow(color: Color.toddlerBlue.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         
                         Button(action: { onScanBarcode("TOY002") }) {
-                            HStack {
+                            HStack(spacing: 12) {
                                 Image(systemName: "barcode")
-                                Text("TOY002 ($12.50)")
+                                    .font(.system(size: 26, weight: .bold))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Blocks ($12.50)")
+                                        .font(.system(size: 20, weight: .black, design: .rounded))
+                                    Text("Barcode: TOY002")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .opacity(0.85)
+                                }
                             }
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 72)
                             .background(Color.toddlerGreen)
                             .foregroundColor(.white)
-                            .cornerRadius(16)
+                            .cornerRadius(22)
+                            .shadow(color: Color.toddlerGreen.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         
                         Button(action: { onScanBarcode("TOY003") }) {
-                            HStack {
+                            HStack(spacing: 12) {
                                 Image(systemName: "barcode")
-                                Text("TOY003 ($8.00)")
+                                    .font(.system(size: 26, weight: .bold))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Teddy Bear ($8)")
+                                        .font(.system(size: 20, weight: .black, design: .rounded))
+                                    Text("Barcode: TOY003")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .opacity(0.85)
+                                }
                             }
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 72)
                             .background(Color(hex: "#8B5CF6"))
                             .foregroundColor(.white)
-                            .cornerRadius(16)
+                            .cornerRadius(22)
+                            .shadow(color: Color(hex: "#8B5CF6").opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                     }
-                    .padding(.top, 8)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 24)
                 }
             }
-            .padding(40)
-            .background(
-                RoundedRectangle(cornerRadius: 32)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 8)
-            )
-            .padding(.horizontal, 40)
-            .onAppear {
-                pulse = true
-            }
-            
-            Spacer()
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             LinearGradient(
                 colors: [Color(hex: "#EEF2FF"), Color(hex: "#E0E7FF")],

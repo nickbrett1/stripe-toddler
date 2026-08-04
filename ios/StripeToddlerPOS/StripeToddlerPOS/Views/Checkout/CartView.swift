@@ -80,6 +80,11 @@ struct CartView: View {
                 .background(Color.toddlerSurfaceRaised)
             }
             
+            // Keep Scanning visual banner — animated scanner + bouncing arrow
+            // (see KeepScanningBanner.swift) — communicates "scan more" to
+            // toddlers without relying on words.
+            KeepScanningBanner()
+
             // YouTube Kids-style 2-column visual grid of large item tiles
             ScrollView {
                 LazyVGrid(columns: columns, spacing: ToddlerLayout.gridUnit * 4) {
