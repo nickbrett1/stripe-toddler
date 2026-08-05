@@ -12,11 +12,11 @@ struct CelebrationParticle: Identifiable {
     var alpha: Double = 1.0
 }
 
-// MARK: - Fireworks Particle Effect (TimelineView + Canvas)
+// MARK: - Continuous Fireworks Particle Effect (TimelineView + Canvas)
 struct FireworksEffect: View {
     @State private var particles: [CelebrationParticle] = []
-    @State private var timerActive = true
-    
+    @State private var frameCounter = 0
+
     var body: some View {
         TimelineView(.animation) { timeline in
             Canvas { context, size in
@@ -36,53 +36,60 @@ struct FireworksEffect: View {
                 spawnInitialExplosions()
             }
             .onChange(of: timeline.date) { _ in
-                guard timerActive else { return }
                 updateParticles()
             }
         }
     }
-    
+
     private func spawnInitialExplosions() {
-        // Spawn multiple firework bursts across the screen width
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height
-        
-        spawnBurst(x: screenWidth / 4, y: screenHeight / 3)
-        spawnBurst(x: screenWidth / 2, y: screenHeight / 4)
-        spawnBurst(x: (screenWidth / 4) * 3, y: screenHeight / 3)
+
+        spawnBurst(x: screenWidth * 0.25, y: screenHeight * 0.3)
+        spawnBurst(x: screenWidth * 0.50, y: screenHeight * 0.25)
+        spawnBurst(x: screenWidth * 0.75, y: screenHeight * 0.3)
     }
-    
+
     private func spawnBurst(x: CGFloat, y: CGFloat) {
-        let colors: [Color] = [.toddlerBlue, .toddlerGreen, .toddlerRed, .toddlerYellow]
-        for _ in 0..<40 {
+        let colors: [Color] = [.toddlerBlue, .toddlerGreen, .toddlerRed, .toddlerYellow, .purple, .orange, .pink]
+        let particleCount = Int.random(in: 35...50)
+
+        for _ in 0..<particleCount {
             let angle = Double.random(in: 0...(2 * .pi))
-            let speed = Double.random(in: 3...12)
+            let speed = Double.random(in: 2...9)
             particles.append(
                 CelebrationParticle(
                     x: Double(x),
                     y: Double(y),
                     vx: cos(angle) * speed,
                     vy: sin(angle) * speed,
-                    color: colors.randomElement() ?? .toddlerBlue,
-                    size: CGFloat.random(in: 8...16)
+                    color: colors.randomElement() ?? .toddlerYellow,
+                    size: CGFloat.random(in: 8...22)
                 )
             )
         }
     }
-    
+
     private func updateParticles() {
+        frameCounter += 1
+
+        // Continuously launch new firework bursts every 25 frames (~0.4s) for endless toddler fun!
+        if frameCounter % 25 == 0 {
+            let screenWidth = UIScreen.main.bounds.width
+            let screenHeight = UIScreen.main.bounds.height
+            let randomX = CGFloat.random(in: (screenWidth * 0.15)...(screenWidth * 0.85))
+            let randomY = CGFloat.random(in: (screenHeight * 0.15)...(screenHeight * 0.45))
+            spawnBurst(x: randomX, y: randomY)
+        }
+
         for i in 0..<particles.count {
             particles[i].x += particles[i].vx
             particles[i].y += particles[i].vy
-            particles[i].vy += 0.15 // Gravity force pulling down
-            particles[i].alpha -= 0.012 // Fade out over time
+            particles[i].vy += 0.08 // Gentle gravity
+            particles[i].alpha -= 0.006 // Slow fade so fireworks linger much longer
         }
-        
-        // Prune faded particles to conserve rendering cycles
+
+        // Prune faded particles
         particles.removeAll { $0.alpha <= 0 }
-        
-        if particles.isEmpty {
-            timerActive = false
-        }
     }
 }

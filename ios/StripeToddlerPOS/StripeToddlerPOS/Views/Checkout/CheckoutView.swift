@@ -57,7 +57,7 @@ struct CheckoutView: View {
                 switch viewModel.state {
                 case .waitingForScan:
                     WaitingForScanView(
-                        showTestModeButtons: viewModel.isTestModeEnabled,
+                        showTestModeButtons: viewModel.isTestModeEnabled && viewModel.showQuickAddButtons,
                         onScanBarcode: { barcode in
                             viewModel.handleBarcodeScanned(barcode)
                         }
@@ -67,7 +67,7 @@ struct CheckoutView: View {
                     CartView(
                         items: items,
                         totalCents: totalCents,
-                        showTestModeButtons: viewModel.isTestModeEnabled,
+                        showTestModeButtons: viewModel.isTestModeEnabled && viewModel.showQuickAddButtons,
                         onAddTestItem: { barcode in
                             viewModel.handleBarcodeScanned(barcode)
                         },
@@ -177,26 +177,45 @@ struct AdminSettingsView: View {
         NavigationView {
             Form {
                 Section(header: Text("Simulator & Testing Controls")) {
-                    Toggle("Enable Test Mode Barcode Buttons", isOn: $viewModel.isTestModeEnabled)
-                    
+                    Toggle("Enable Test Mode", isOn: $viewModel.isTestModeEnabled)
+
                     if viewModel.isTestModeEnabled {
-                        Text("Shows the quick-add test bar (Fire Truck, Blocks, Teddy Bear, Add 4 Sample Toys) at the top of the cart for testing without a physical barcode scanner.")
-                            .font(.system(size: 13, design: .rounded))
-                            .foregroundColor(.secondary)
+                        Toggle("Show Quick-Add Item Buttons", isOn: $viewModel.showQuickAddButtons)
                     }
                 }
-                
-                Section(header: Text("Simulated Scan Input")) {
-                    TextField("Enter Barcode (e.g. TOY001)", text: $barcodeInput)
-                        .keyboardType(.asciiCapable)
-                    
-                    Button("Trigger Scan") {
-                        if !barcodeInput.isEmpty {
-                            viewModel.handleBarcodeScanned(barcodeInput)
-                            dismiss()
+
+                if viewModel.isTestModeEnabled {
+                    Section(header: Text("Simulate Scan Input")) {
+                        TextField("Enter Barcode (e.g. TOY001)", text: $barcodeInput)
+                            .keyboardType(.asciiCapable)
+
+                        Button("Trigger Scan") {
+                            if !barcodeInput.isEmpty {
+                                viewModel.handleBarcodeScanned(barcodeInput)
+                                dismiss()
+                            }
+                        }
+                        .disabled(barcodeInput.isEmpty)
+                    }
+
+                    Section(
+                        header: Text("Test Mode Payment Outcome"),
+                        footer: Text("When you proceed to checkout in the cart, payment will automatically resolve using the selected simulation outcome.")
+                            .font(.system(size: 12, design: .rounded))
+                    ) {
+                        ForEach(PaymentSimulationOutcome.allCases) { outcome in
+                            Button(action: {
+                                viewModel.simulatedPaymentOutcome = outcome
+                            }) {
+                                HStack {
+                                    Image(systemName: viewModel.simulatedPaymentOutcome == outcome ? "largecircle.fill.circle" : "circle")
+                                        .foregroundColor(viewModel.simulatedPaymentOutcome == outcome ? .toddlerBlue : .secondary)
+                                    Text(outcome.displayName)
+                                        .foregroundColor(.primary)
+                                }
+                            }
                         }
                     }
-                    .disabled(barcodeInput.isEmpty)
                 }
             }
             .navigationTitle("Admin Terminal Control")

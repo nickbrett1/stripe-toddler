@@ -55,7 +55,11 @@ struct ErrorView: View {
     private func truncateMessage(_ rawMessage: String) -> String {
         let words = rawMessage.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         if words.count > 6 {
-            return words.prefix(5).joined(separator: " ") + "..."
+            var trimmed = words.prefix(5).joined(separator: " ")
+            while trimmed.hasSuffix(":") || trimmed.hasSuffix(",") || trimmed.hasSuffix(".") || trimmed.hasSuffix(";") {
+                trimmed.removeLast()
+            }
+            return trimmed + "..."
         }
         return rawMessage
     }

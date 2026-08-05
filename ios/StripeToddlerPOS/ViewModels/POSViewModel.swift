@@ -1,6 +1,23 @@
 import Foundation
 import Combine
 
+// MARK: - Payment Simulation Outcome
+public enum PaymentSimulationOutcome: String, CaseIterable, Identifiable {
+    case approved = "Approved"
+    case declined = "Declined"
+    case networkError = "Network Error"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .approved: return "Simulate: Approved ✓"
+        case .declined: return "Simulate: Declined ✗"
+        case .networkError: return "Simulate: Network Error ⚡"
+        }
+    }
+}
+
 // MARK: - POS Flow State
 public enum POSFlowState: Equatable {
     case waitingForScan
@@ -19,6 +36,8 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
     @Published public var scannerConnected: Bool = true
     @Published public private(set) var readerConnected: Bool = false
     @Published public var isTestModeEnabled: Bool = false
+    @Published public var showQuickAddButtons: Bool = true
+    @Published public var simulatedPaymentOutcome: PaymentSimulationOutcome = .approved
     
     private let apiClient: BackendAPIClientProtocol
     private let terminalManager: StripeTerminalManagerProtocol
@@ -98,9 +117,26 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 let response = try await apiClient.createPaymentIntent(amountCents: totalCents, barcodes: barcodes)
                 
                 state = .awaitingCardTap
-                terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)
+
+                if isTestModeEnabled {
+                    // Show "Tap Card on Reader!" modal realistically for 1.2s before auto-processing simulation outcome
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+
+                    switch simulatedPaymentOutcome {
+                    case .approved:
+                        terminalManagerDidCompletePayment(terminalManager, paymentIntentId: response.paymentIntentId)
+                    case .declined:
+                        state = .error(message: "Card Declined. Please Try Again.")
+                        ToddlerHaptic.playNotification(ToddlerHapticType.error)
+                    case .networkError:
+                        state = .error(message: "Network Connection Lost")
+                        ToddlerHaptic.playNotification(ToddlerHapticType.error)
+                    }
+                } else {
+                    terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)
+                }
             } catch {
-                state = .error(message: "Failed to sync payment reader: \(error.localizedDescription)")
+                state = .error(message: "Payment Reader Sync Failed")
                 ToddlerHaptic.playNotification(ToddlerHapticType.error)
             }
         }
@@ -112,6 +148,8 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         state = .waitingForScan
         ToddlerHaptic.play(ToddlerHapticStyle.medium)
     }
+
+
     
     /// Dismiss the current error overlay and return to the cart (if items are
     /// still cached) instead of wiping the session and bouncing back to the
