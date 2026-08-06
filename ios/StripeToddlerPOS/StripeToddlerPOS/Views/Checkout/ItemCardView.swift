@@ -181,46 +181,36 @@ struct RemoteProductImageView: View {
             self.debugTrace = "Fetching..."
         }
         
-        // 1. Attempt HTTP GET with Safari User-Agent & image headers
+        // 1. Attempt data fetch (handles HTTP/HTTPS, file://, data: URIs, and local resources)
         var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 10.0)
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
-        request.setValue("image/jpeg,image/png,*/*", forHTTPHeaderField: "Accept")
+        request.setValue("image/jpeg,image/png,image/*,*/*", forHTTPHeaderField: "Accept")
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [ImageTrace] Failed: Non-HTTP response type for \(url.absoluteString)")
-                await updateStatus(failed: true, debug: "Non-HTTP Resp")
-                return
-            }
-            
-            let mimeType = httpResponse.mimeType ?? "unknown"
-            print("📥 [ImageTrace] HTTP Status: \(httpResponse.statusCode), MIME: \(mimeType), Bytes: \(data.count), Time: \(elapsedMs)ms")
-            
-            if httpResponse.statusCode == 200 {
-                if let uiImage = UIImage(data: data) {
-                    print("✅ [ImageTrace] SUCCESS: Decoded PNG/JPEG UIImage (\(Int(uiImage.size.width))x\(Int(uiImage.size.height))) for '\(item.name)'!")
-                    await MainActor.run {
-                        self.loadedImage = uiImage
-                        self.isLoading = false
-                    }
-                    return
-                } else {
-                    print("⚠️ [ImageTrace] ERROR: Received \(data.count) bytes of MIME '\(mimeType)' but UIImage(data:) failed to decode raster image format!")
-                    await updateStatus(failed: true, debug: "Decode Err (\(data.count)B)")
-                    return
+            // 2. Decode image directly from binary bytes (works across all URL response types)
+            if let uiImage = UIImage(data: data) {
+                print("✅ [ImageTrace] SUCCESS: Decoded image (\(Int(uiImage.size.width))x\(Int(uiImage.size.height))) for '\(item.name)' in \(elapsedMs)ms!")
+                await MainActor.run {
+                    self.loadedImage = uiImage
+                    self.isLoading = false
                 }
-            } else {
-                print("❌ [ImageTrace] HTTP Error Status \(httpResponse.statusCode) for \(url.absoluteString)")
-                await updateStatus(failed: true, debug: "HTTP \(httpResponse.statusCode)")
                 return
             }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("❌ [ImageTrace] HTTP Status \(httpResponse.statusCode) for \(url.absoluteString)")
+                await updateStatus(failed: true, debug: "Photo Unavailable")
+                return
+            }
+            
+            await updateStatus(failed: true, debug: "Photo Unavailable")
         } catch {
             let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
             print("💥 [ImageTrace] URLSession Exception for '\(item.name)' after \(elapsedMs)ms: \(error.localizedDescription)")
-            await updateStatus(failed: true, debug: "Err: \(error.localizedDescription)")
+            await updateStatus(failed: true, debug: "Photo Unavailable")
         }
     }
     
