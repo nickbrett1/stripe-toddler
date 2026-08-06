@@ -93,7 +93,7 @@ struct CheckoutView: View {
                     )
                     .disabled(true)
                     
-                case .celebrating(let itemsSold):
+                case .celebrating:
                     WaitingForScanView()
                         .disabled(true)
                     

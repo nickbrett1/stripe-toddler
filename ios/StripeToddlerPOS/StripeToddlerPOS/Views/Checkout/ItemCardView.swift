@@ -173,7 +173,7 @@ struct RemoteProductImageView: View {
         let url = resolvedImageUrl
         
         print("🔍 [ImageTrace] Initiating fetch for '\(item.name)'")
-        print("🔗 [ImageTrace] Target Photo URL: \(url.absoluteString)")
+        print("🔗 [ImageTrace] Target Photo URL: \(url.displaySummary)")
         
         await MainActor.run {
             self.isLoading = true
@@ -218,7 +218,7 @@ struct RemoteProductImageView: View {
             }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("❌ [ImageTrace] HTTP Status \(httpResponse.statusCode) for \(url.absoluteString)")
+                print("❌ [ImageTrace] HTTP Status \(httpResponse.statusCode) for \(url.displaySummary)")
                 await updateStatus(failed: true, debug: "Photo Unavailable")
                 return
             }
@@ -237,6 +237,18 @@ struct RemoteProductImageView: View {
             self.loadFailed = failed
             self.debugTrace = debug
         }
+    }
+}
+
+// MARK: - URL Log Display Helper
+private extension URL {
+    var displaySummary: String {
+        let str = absoluteString
+        if str.hasPrefix("data:") {
+            let prefix = str.prefix(32)
+            return "\(prefix)... [inline base64 image, \(str.count) bytes]"
+        }
+        return str
     }
 }
 
