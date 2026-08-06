@@ -181,7 +181,24 @@ struct RemoteProductImageView: View {
             self.debugTrace = "Fetching..."
         }
         
-        // 1. Attempt data fetch (handles HTTP/HTTPS, file://, data: URIs, and local resources)
+        // 1. Handle inline data: scheme URIs (e.g. data:image/jpeg;base64,...)
+        let rawUrlString = url.absoluteString
+        if rawUrlString.hasPrefix("data:") || url.scheme == "data" {
+            let components = rawUrlString.components(separatedBy: ",")
+            if components.count > 1,
+               let base64String = components.last,
+               let data = Data(base64Encoded: base64String.trimmingCharacters(in: .whitespacesAndNewlines)),
+               let uiImage = UIImage(data: data) {
+                print("✅ [ImageTrace] SUCCESS: Decoded base64 data URI image (\(Int(uiImage.size.width))x\(Int(uiImage.size.height))) for '\(item.name)'!")
+                await MainActor.run {
+                    self.loadedImage = uiImage
+                    self.isLoading = false
+                }
+                return
+            }
+        }
+        
+        // 2. Attempt data fetch (handles HTTP/HTTPS, file://, and local resources)
         var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 10.0)
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
         request.setValue("image/jpeg,image/png,image/*,*/*", forHTTPHeaderField: "Accept")
