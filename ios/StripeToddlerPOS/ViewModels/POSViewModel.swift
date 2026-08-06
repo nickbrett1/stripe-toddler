@@ -6,6 +6,7 @@ public enum PaymentSimulationOutcome: String, CaseIterable, Identifiable {
     case approved = "Approved"
     case declined = "Declined"
     case networkError = "Network Error"
+    case none = "None"
 
     public var id: String { rawValue }
 
@@ -14,6 +15,7 @@ public enum PaymentSimulationOutcome: String, CaseIterable, Identifiable {
         case .approved: return "Simulate: Approved ✓"
         case .declined: return "Simulate: Declined ✗"
         case .networkError: return "Simulate: Network Error ⚡"
+        case .none: return "Simulate: None (Stay on Tap Modal)"
         }
     }
 }
@@ -131,6 +133,9 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                     case .networkError:
                         state = .error(message: "Network Connection Lost")
                         ToddlerHaptic.playNotification(ToddlerHapticType.error)
+                    case .none:
+                        // Remain on .awaitingCardTap screen so user can easily preview the modal
+                        break
                     }
                 } else {
                     terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)

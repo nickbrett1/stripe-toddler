@@ -13,8 +13,8 @@ struct ErrorView: View {
             VStack(spacing: ToddlerLayout.gridUnit * 5) {
                 Spacer()
                 
-                // Giant error icon (Rule 9.1: 160x160pt xmark.octagon.fill in toddlerRed)
-                Image(systemName: "xmark.octagon.fill")
+                // Giant error icon (Rule 9.1: 160x160pt hand.thumbsdown.fill in toddlerRed)
+                Image(systemName: "hand.thumbsdown.fill")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 160, height: 160)
