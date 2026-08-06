@@ -5,7 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-<<<<<<< HEAD
 
   # Rust Cloudflare Worker Dependencies
   - package-ecosystem: "cargo"
@@ -16,9 +15,5 @@ updates:
   # iOS Swift Package Manager Dependencies
   - package-ecosystem: "swift"
     directory: "/ios/StripeToddlerPOS"
-=======
-  - package-ecosystem: "cargo"
-    directory: "/"
->>>>>>> 7b0a10e (chore: refresh devcontainer, CI and tooling config)
     schedule:
       interval: "weekly"
