@@ -7,10 +7,10 @@ struct ItemCardView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top Section: Large Hero Product Photo with Remove Overlay
+            // Top Section: Hero Product Photo with Remove Overlay
             ZStack(alignment: .topTrailing) {
                 RemoteProductImageView(item: item)
-                    .frame(height: 220)
+                    .frame(height: 145)
                     .clipShape(RoundedRectangle(cornerRadius: ToddlerLayout.cornerRadiusCard + 4))
                 
                 // Top-Right Overlay: Remove Button (80pt Touch Zone for Toddlers)
@@ -123,13 +123,13 @@ struct RemoteProductImageView: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)
+                    .frame(height: 145)
                     .clipped()
             } else if isLoading {
                 RoundedRectangle(cornerRadius: ToddlerLayout.cornerRadiusCard + 4)
                     .fill(Color.toddlerSurfaceRaised)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)
+                    .frame(height: 145)
                     .overlay(
                         VStack(spacing: 6) {
                             ProgressView()
@@ -144,13 +144,13 @@ struct RemoteProductImageView: View {
                 RoundedRectangle(cornerRadius: ToddlerLayout.cornerRadiusCard + 4)
                     .fill(fallbackColor.opacity(0.15))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)
+                    .frame(height: 145)
                     .overlay(
                         VStack(spacing: 6) {
                             Image(systemName: fallbackSymbolName)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 56, height: 56)
+                                .frame(width: 48, height: 48)
                                 .foregroundColor(fallbackColor)
                             Text(debugTrace)
                                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -162,7 +162,7 @@ struct RemoteProductImageView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 220)
+        .frame(height: 145)
         .task(id: item.imageUrl) {
             await fetchImageWithTrace()
         }

@@ -99,17 +99,17 @@ struct CartView: View {
                 .padding(.bottom, ToddlerLayout.gridUnit * 4)
             }
             
-            // Bottom Action Bar: 160pt height containing Pay and Reset CTAs (Rule 5.2)
+            // Bottom Action Bar: Streamlined 90pt height containing Pay and Reset CTAs
             HStack(spacing: ToddlerLayout.targetSpacing) {
-                // Clear Cart / Cancel button (Rule 2.2 destructive, Rule 3.3)
+                // Clear Cart / Cancel button
                 Button(action: onReset) {
                     HStack(spacing: ToddlerLayout.gridUnit * 2) {
                         Image(systemName: "xmark.circle.fill")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 64, height: 64)
+                            .frame(width: 44, height: 44)
                         Text("Reset")
-                            .font(.system(size: 18, weight: .bold)) // Rule 2.4 supplement
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -117,17 +117,17 @@ struct CartView: View {
                     .cornerRadius(ToddlerLayout.cornerRadiusButton)
                 }
                 .buttonStyle(ToddlerButtonStyle())
-                .frame(height: 120) // Touch target minimum height
+                .frame(height: 74)
                 
-                // Confirm Payment button (Rule 2.2 confirm, Rule 3.3)
+                // Confirm Payment button
                 Button(action: onCheckout) {
                     HStack(spacing: ToddlerLayout.gridUnit * 2) {
                         Image(systemName: "checkmark.circle.fill")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 64, height: 64)
+                            .frame(width: 44, height: 44)
                         Text("Pay")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 20, weight: .heavy, design: .rounded))
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -135,10 +135,10 @@ struct CartView: View {
                     .cornerRadius(ToddlerLayout.cornerRadiusButton)
                 }
                 .buttonStyle(ToddlerButtonStyle())
-                .frame(height: 120)
+                .frame(height: 74)
             }
             .padding(.horizontal, ToddlerLayout.gridUnit * 4)
-            .frame(height: 160) // Bottom bar height
+            .frame(height: 90) // Bottom bar height
             .background(Color.toddlerSurface)
             .shadow(
                 color: Color.black.opacity(ToddlerLayout.shadowOpacity),
