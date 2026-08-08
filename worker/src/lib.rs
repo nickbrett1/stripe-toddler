@@ -459,6 +459,28 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
             json_response(&serde_json::json!({ "status": "success", "barcode": item.barcode }))
         })
+        .delete_async("/api/admin/inventory", |req, ctx| async move {
+            if !validate_admin_auth(&req, &ctx.env)? {
+                return error_response("Unauthorized: Invalid Admin API Key", 401);
+            }
+
+            let barcode = match req.url()?.query_pairs().find(|(k, _)| k == "barcode") {
+                Some((_, v)) => v.to_string(),
+                None => return error_response("Missing barcode query parameter", 400),
+            };
+
+            let kv = match ctx.env.kv("STRIPE_TODDLER_INVENTORY") {
+                Ok(k) => k,
+                Err(e) => return error_response(&format!("KV Error: {:?}", e), 500),
+            };
+
+            let item_key = format!("item:{}", barcode);
+            if let Err(e) = kv.delete(&item_key).await {
+                return error_response(&format!("KV Delete Error: {:?}", e), 500);
+            }
+
+            json_response(&serde_json::json!({ "status": "success", "barcode": barcode, "deleted": true }))
+        })
         .post_async("/api/admin/inventory/upload", |mut req, ctx| async move {
             if !validate_admin_auth(&req, &ctx.env)? {
                 return error_response("Unauthorized: Invalid Admin API Key", 401);
