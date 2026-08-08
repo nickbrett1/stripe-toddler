@@ -10,38 +10,48 @@ struct ErrorView: View {
             Color.black.opacity(0.90)
                 .ignoresSafeArea()
             
-            VStack(spacing: ToddlerLayout.gridUnit * 5) {
+            VStack(spacing: ToddlerLayout.gridUnit * 4) {
                 Spacer()
                 
-                // Giant error icon (Rule 9.1: 160x160pt hand.thumbsdown.fill in toddlerRed)
+                // Giant error icon (red thumbs down)
                 Image(systemName: "hand.thumbsdown.fill")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 160, height: 160)
+                    .frame(width: 140, height: 140)
                     .foregroundColor(.toddlerRed)
                 
-                // Simple bold error title (Rule 9.1: title2 bold, max 6 words)
-                Text(truncateMessage(message))
-                    .font(.system(size: 28, weight: .bold)) // Truncated bold feedback
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, ToddlerLayout.gridUnit * 6)
+                // Full error title and detail text
+                VStack(spacing: ToddlerLayout.gridUnit * 2) {
+                    Text(formattedTitle)
+                        .font(.system(size: 32, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    
+                    if !formattedDetail.isEmpty {
+                        Text(formattedDetail)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(Color.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(4)
+                    }
+                }
+                .padding(.horizontal, ToddlerLayout.gridUnit * 6)
                 
                 Spacer()
                 
-                // Single 120pt CTA Dismiss button (Rule 9.1 / Rule 1.2: green confirm button)
+                // Dismiss button
                 Button(action: onDismiss) {
                     HStack(spacing: ToddlerLayout.gridUnit * 2) {
                         Image(systemName: "checkmark.circle.fill")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 64, height: 64)
+                            .frame(width: 48, height: 48)
                         Text("Okay")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 24, weight: .heavy, design: .rounded))
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, ToddlerLayout.gridUnit * 6)
-                    .frame(height: 120)
+                    .padding(.horizontal, ToddlerLayout.gridUnit * 8)
+                    .frame(height: 90)
                     .background(Color.toddlerGreen)
                     .cornerRadius(ToddlerLayout.cornerRadiusButton)
                 }
@@ -51,17 +61,27 @@ struct ErrorView: View {
         }
     }
     
-    // Force message constraints so toddler/parent doesn't get overwhelmed (Rule 9.1 max 6 words)
-    private func truncateMessage(_ rawMessage: String) -> String {
-        let words = rawMessage.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-        if words.count > 6 {
-            var trimmed = words.prefix(5).joined(separator: " ")
-            while trimmed.hasSuffix(":") || trimmed.hasSuffix(",") || trimmed.hasSuffix(".") || trimmed.hasSuffix(";") {
-                trimmed.removeLast()
-            }
-            return trimmed + "..."
+    private var formattedTitle: String {
+        if message.localizedCaseInsensitiveContains("terminal error") ||
+            message.localizedCaseInsensitiveContains("connecting") ||
+            message.localizedCaseInsensitiveContains("reader") {
+            return "Card Reader Not Found!"
         }
-        return rawMessage
+        let lines = message.components(separatedBy: "\n")
+        return lines.first ?? message
+    }
+
+    private var formattedDetail: String {
+        if message.localizedCaseInsensitiveContains("terminal error") ||
+            message.localizedCaseInsensitiveContains("connecting") ||
+            message.localizedCaseInsensitiveContains("reader") {
+            return "Turn on your Stripe Reader M2, or enable Test Mode in Admin Settings (⚙️)"
+        }
+        let lines = message.components(separatedBy: "\n")
+        if lines.count > 1 {
+            return lines.dropFirst().joined(separator: " ")
+        }
+        return ""
     }
 }
 
