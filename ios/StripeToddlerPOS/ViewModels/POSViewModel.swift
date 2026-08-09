@@ -139,6 +139,36 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
         
         // Trigger heavy haptic on checkout start (Rule 8)
         ToddlerHaptic.play(ToddlerHapticStyle.heavy)
+
+        if isTestModeEnabled {
+            // Test mode is a pure offline simulation: no Stripe/worker calls.
+            // A simulated sale is intentionally NOT persisted to the database
+            // (no card was ever collected or captured), so it must not be
+            // masqueraded as a real transaction.
+            state = .awaitingCardTap
+
+            Task {
+                // Show "Tap Card on Reader!" modal realistically for 1.2s before
+                // auto-processing the simulation outcome.
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+
+                switch simulatedPaymentOutcome {
+                case .approved:
+                    completeTestModeSale()
+                case .declined:
+                    state = .error(message: "Card Declined. Please Try Again.")
+                    ToddlerHaptic.playNotification(ToddlerHapticType.error)
+                case .networkError:
+                    state = .error(message: "Network Connection Lost")
+                    ToddlerHaptic.playNotification(ToddlerHapticType.error)
+                case .none:
+                    // Remain on .awaitingCardTap screen so user can easily preview the modal
+                    break
+                }
+            }
+            return
+        }
+
         state = .readerSyncing
         startReaderSyncWatchdog()
         
@@ -146,35 +176,12 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
             do {
                 let barcodes = items.map { $0.barcode }
                 let response = try await apiClient.createPaymentIntent(amountCents: totalCents, barcodes: barcodes)
-                
-                if isTestModeEnabled {
-                    // Test mode: show the "Tap Card on Reader!" modal while the
-                    // outcome is simulated.
-                    state = .awaitingCardTap
 
-                    // Show "Tap Card on Reader!" modal realistically for 1.2s before auto-processing simulation outcome
-                    try? await Task.sleep(nanoseconds: 1_200_000_000)
-
-                    switch simulatedPaymentOutcome {
-                    case .approved:
-                        terminalManagerDidCompletePayment(terminalManager, paymentIntentId: response.paymentIntentId)
-                    case .declined:
-                        state = .error(message: "Card Declined. Please Try Again.")
-                        ToddlerHaptic.playNotification(ToddlerHapticType.error)
-                    case .networkError:
-                        state = .error(message: "Network Connection Lost")
-                        ToddlerHaptic.playNotification(ToddlerHapticType.error)
-                    case .none:
-                        // Remain on .awaitingCardTap screen so user can easily preview the modal
-                        break
-                    }
-                } else {
-                    // Real reader: stay on .readerSyncing until the terminal
-                    // manager confirms the SDK is actively collecting (see
-                    // terminalManagerDidBeginCollectingPayment), so "Tap Card on
-                    // Reader" never appears before the reader is actually ready.
-                    terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)
-                }
+                // Real reader: stay on .readerSyncing until the terminal
+                // manager confirms the SDK is actively collecting (see
+                // terminalManagerDidBeginCollectingPayment), so "Tap Card on
+                // Reader" never appears before the reader is actually ready.
+                terminalManager.collectPayment(amount: totalCents, clientSecret: response.clientSecret)
             } catch {
                 // This failure is about syncing the checkout with the backend
                 // (creating the PaymentIntent), NOT the reader — so surface the
@@ -184,6 +191,15 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 ToddlerHaptic.playNotification(ToddlerHapticType.error)
             }
         }
+    }
+
+    /// Simulated sale success for test mode: celebrates like a real payment
+    /// (haptic + sound) but never touches Stripe or the database.
+    private func completeTestModeSale() {
+        cancelCheckoutWatchdog()
+        state = .celebrating(itemsSold: cachedCartItems)
+        ToddlerHaptic.playNotification(ToddlerHapticType.success)
+        ToddlerSound.playSuccess()
     }
     
     public func resetPOS() {

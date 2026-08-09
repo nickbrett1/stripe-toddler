@@ -45,6 +45,14 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
     private var deviceId: String {
         UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
     }
+
+    /// True when pointed at a local dev backend (wrangler dev / simulator).
+    /// Simulated fallbacks are only permitted in this context so a real
+    /// backend failure is never mistaken for a successful transaction.
+    private var isLocalDevelopment: Bool {
+        guard let host = baseURL.host?.lowercased() else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host.hasSuffix(".local")
+    }
     
     public init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
@@ -286,14 +294,21 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                 return try jsonDecoder.decode(PaymentIntentResponse.self, from: data)
             }
+            if let httpResponse = response as? HTTPURLResponse {
+                throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
+            }
+            throw BackendAPIError.missingData
         } catch {
-            // Fallthrough to local fallback for local development & simulator testing
+            // Only fall back to a simulated intent for local dev & simulator
+            // testing. Against a real backend, surface the failure.
+            if isLocalDevelopment {
+                return PaymentIntentResponse(
+                    paymentIntentId: "pi_simulated_\(UUID().uuidString.prefix(8))",
+                    clientSecret: "pi_simulated_secret_\(UUID().uuidString.prefix(8))"
+                )
+            }
+            throw error
         }
-
-        return PaymentIntentResponse(
-            paymentIntentId: "pi_simulated_\(UUID().uuidString.prefix(8))",
-            clientSecret: "pi_simulated_secret_\(UUID().uuidString.prefix(8))"
-        )
     }
 
     public func captureTransaction(paymentIntentId: String, totalCents: Int, items: [POSInventoryItem]) async throws -> CaptureResponse {
@@ -320,13 +335,22 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                 return try jsonDecoder.decode(CaptureResponse.self, from: data)
             }
+            if let httpResponse = response as? HTTPURLResponse {
+                throw BackendAPIError.badResponse(statusCode: httpResponse.statusCode)
+            }
+            throw BackendAPIError.missingData
         } catch {
-            // Fallthrough to local fallback for local development & simulator testing
+            // Only simulate a successful capture for local dev & simulator
+            // testing. Against a real backend, surface the failure — a fake
+            // success previously hid the fact that no transaction was ever
+            // persisted to D1 (admin analytics showed nothing).
+            if isLocalDevelopment {
+                return CaptureResponse(
+                    status: "succeeded",
+                    transactionId: "txn_simulated_\(UUID().uuidString.prefix(8))"
+                )
+            }
+            throw error
         }
-
-        return CaptureResponse(
-            status: "succeeded",
-            transactionId: "txn_simulated_\(UUID().uuidString.prefix(8))"
-        )
     }
 }
