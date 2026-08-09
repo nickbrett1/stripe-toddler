@@ -11,12 +11,19 @@ import AVFoundation
 // (Karplus-Strong, 1979): a burst of noise plus a resonant feedback loop
 // that decays like a real vibrating string — a convincing guitar voice
 // from pure math, no sample files.
+//
+// Every payment picks one of three solos at random (never the same solo
+// twice in a row), and every solo is at least ~3 seconds long so the
+// celebration lands with maximum impact.
 public enum ToddlerSound {
     private static let sampleRate: Double = 44_100
 
     private static var engine: AVAudioEngine?
     private static var player = AVAudioPlayerNode()
     private static var isConfigured = false
+
+    // Remembers the last solo played so consecutive payments alternate.
+    private static var lastSoloIndex: Int?
 
     // MARK: - Public API
 
@@ -32,9 +39,8 @@ public enum ToddlerSound {
     }
 
     /// Played when a payment completes and the celebration screen appears.
-    /// A ~4-second Karplus-Strong guitar solo in G major: an opening strum,
-    /// a rising melodic phrase, a half-step slide, resolving strums, and a
-    /// ringing high G to finish.
+    /// Picks one of three Karplus-Strong guitar solos (all ≥3s) at random,
+    /// avoiding an immediate repeat.
     public static func playSuccess() {
         playGuitarSolo()
     }
@@ -99,27 +105,47 @@ public enum ToddlerSound {
         guard !isRunningTests else { return }
         guard configureEngine() else { return }
 
-        // The composition: strums plus a few seconds of happy melody in G major.
-        let strings: [GuitarString] = [
-            // --- Opening strum: G major, low to high ---
+        // Three distinct compositions, each ≥3s. Pick one at random, never
+        // repeating the immediately-previous solo.
+        let solos: [[GuitarString]] = [
+            makeSunnyGMajorSolo(),
+            makeCheeryCMajorSolo(),
+            makeRockingPentatonicSolo(),
+        ]
+
+        var index = Int.random(in: 0..<solos.count)
+        if let last = lastSoloIndex, solos.count > 1, index == last {
+            index = (index + 1) % solos.count
+        }
+        lastSoloIndex = index
+
+        play(buffer: makeGuitarSoloBuffer(strings: solos[index]))
+    }
+
+    /// Solo 1 (~4.3s): opening G-major strum, rising B4-D5 phrase into a held
+    /// ringing G5, descending turn with a half-step slide, resolving C/G strums,
+    /// and a final high G.
+    private static func makeSunnyGMajorSolo() -> [GuitarString] {
+        [
+            // Opening strum: G major, low to high
             GuitarString(frequency: 196.00, startTime: 0.00, duration: 1.00, velocity: 0.90),  // G3
             GuitarString(frequency: 246.94, startTime: 0.02, duration: 1.00, velocity: 0.90),  // B3
             GuitarString(frequency: 293.66, startTime: 0.04, duration: 1.00, velocity: 0.90),  // D4
             GuitarString(frequency: 392.00, startTime: 0.06, duration: 1.00, velocity: 0.85),  // G4
 
-            // --- Rising phrase: B4, D5, then a long ringing G5 ---
+            // Rising phrase: B4, D5, then a long ringing G5
             GuitarString(frequency: 493.88, startTime: 0.40, duration: 0.28, velocity: 0.85),  // B4
             GuitarString(frequency: 587.33, startTime: 0.62, duration: 0.28, velocity: 0.85),  // D5
             GuitarString(frequency: 783.99, startTime: 0.84, duration: 0.95, velocity: 0.80, vibrato: true), // G5 held
 
-            // --- Descending turn with a half-step slide up (F#5 -> G5) ---
+            // Descending turn with a half-step slide up (F#5 -> G5)
             GuitarString(frequency: 739.99, startTime: 1.82, duration: 0.30, velocity: 0.85, slideTo: 783.99), // F#5 -> G5
             GuitarString(frequency: 659.26, startTime: 2.10, duration: 0.22, velocity: 0.80),  // E5
             GuitarString(frequency: 523.25, startTime: 2.28, duration: 0.22, velocity: 0.80),  // C5
             GuitarString(frequency: 587.33, startTime: 2.46, duration: 0.26, velocity: 0.85),  // D5
             GuitarString(frequency: 493.88, startTime: 2.70, duration: 0.30, velocity: 0.85),  // B4
 
-            // --- Resolution: quick C major, then G major strum ---
+            // Resolution: quick C major, then G major strum
             GuitarString(frequency: 261.63, startTime: 3.00, duration: 0.50, velocity: 0.85),  // C4
             GuitarString(frequency: 329.63, startTime: 3.02, duration: 0.50, velocity: 0.85),  // E4
             GuitarString(frequency: 392.00, startTime: 3.04, duration: 0.50, velocity: 0.80),  // G4
@@ -128,11 +154,84 @@ public enum ToddlerSound {
             GuitarString(frequency: 293.66, startTime: 3.46, duration: 0.80, velocity: 0.90),  // D4
             GuitarString(frequency: 392.00, startTime: 3.48, duration: 0.80, velocity: 0.85),  // G4
 
-            // --- Final ringing high G over the chord ---
+            // Final ringing high G over the chord
             GuitarString(frequency: 783.99, startTime: 3.60, duration: 0.75, velocity: 0.85, vibrato: true), // G5
         ]
+    }
 
-        play(buffer: makeGuitarSoloBuffer(strings: strings))
+    /// Solo 2 (~4.6s): sunny C-major strum, rising E5-G5 into a long ringing C6,
+    /// a descending run, a cheeky B4->C5 half-step slide, and a final C strum
+    /// capped by a high C.
+    private static func makeCheeryCMajorSolo() -> [GuitarString] {
+        [
+            // Opening strum: C major, low to high
+            GuitarString(frequency: 261.63, startTime: 0.00, duration: 0.85, velocity: 0.90),  // C4
+            GuitarString(frequency: 329.63, startTime: 0.02, duration: 0.85, velocity: 0.90),  // E4
+            GuitarString(frequency: 392.00, startTime: 0.04, duration: 0.85, velocity: 0.90),  // G4
+            GuitarString(frequency: 523.25, startTime: 0.06, duration: 0.85, velocity: 0.85),  // C5
+
+            // Rising phrase: E5, G5, then a long ringing C6
+            GuitarString(frequency: 659.26, startTime: 0.45, duration: 0.25, velocity: 0.85),  // E5
+            GuitarString(frequency: 783.99, startTime: 0.70, duration: 0.25, velocity: 0.85),  // G5
+            GuitarString(frequency: 1046.50, startTime: 0.95, duration: 1.00, velocity: 0.80, vibrato: true), // C6 held
+
+            // Descending run back down the major arpeggio
+            GuitarString(frequency: 880.00, startTime: 1.95, duration: 0.28, velocity: 0.85),  // A5
+            GuitarString(frequency: 783.99, startTime: 2.22, duration: 0.25, velocity: 0.80),  // G5
+            GuitarString(frequency: 659.26, startTime: 2.46, duration: 0.25, velocity: 0.80),  // E5
+            GuitarString(frequency: 523.25, startTime: 2.68, duration: 0.25, velocity: 0.80),  // C5
+
+            // Cheeky turn: D5, E5, then B4 sliding up a half-step into C5
+            GuitarString(frequency: 587.33, startTime: 2.92, duration: 0.22, velocity: 0.80),  // D5
+            GuitarString(frequency: 659.26, startTime: 3.12, duration: 0.26, velocity: 0.85),  // E5
+            GuitarString(frequency: 493.88, startTime: 3.38, duration: 0.35, velocity: 0.85, slideTo: 523.25), // B4 -> C5
+
+            // Final C-major strum capped by a high C
+            GuitarString(frequency: 261.63, startTime: 3.70, duration: 0.90, velocity: 0.90),  // C4
+            GuitarString(frequency: 329.63, startTime: 3.72, duration: 0.90, velocity: 0.90),  // E4
+            GuitarString(frequency: 392.00, startTime: 3.74, duration: 0.90, velocity: 0.90),  // G4
+            GuitarString(frequency: 523.25, startTime: 3.76, duration: 0.90, velocity: 0.85),  // C5
+            GuitarString(frequency: 1046.50, startTime: 3.90, duration: 0.70, velocity: 0.85, vibrato: true), // C6
+        ]
+    }
+
+    /// Solo 3 (~4.5s): a rocking G-pentatonic lick — punchy G power strum, a
+    /// quick D5-B4-G4-A4-B4-D5 run, a long wailing G5, a descending run with a
+    /// slide, and a final G strum topped with a ringing D5.
+    private static func makeRockingPentatonicSolo() -> [GuitarString] {
+        [
+            // Punchy opening strum: G power chord feel
+            GuitarString(frequency: 196.00, startTime: 0.00, duration: 0.75, velocity: 0.95),  // G3
+            GuitarString(frequency: 293.66, startTime: 0.02, duration: 0.75, velocity: 0.95),  // D4
+            GuitarString(frequency: 392.00, startTime: 0.04, duration: 0.75, velocity: 0.90),  // G4
+
+            // Quick rock lick: D5-B4-G4-A4-B4-D5
+            GuitarString(frequency: 587.33, startTime: 0.50, duration: 0.20, velocity: 0.85),  // D5
+            GuitarString(frequency: 493.88, startTime: 0.68, duration: 0.18, velocity: 0.80),  // B4
+            GuitarString(frequency: 392.00, startTime: 0.84, duration: 0.18, velocity: 0.80),  // G4
+            GuitarString(frequency: 440.00, startTime: 1.00, duration: 0.18, velocity: 0.80),  // A4
+            GuitarString(frequency: 493.88, startTime: 1.16, duration: 0.18, velocity: 0.80),  // B4
+            GuitarString(frequency: 587.33, startTime: 1.32, duration: 0.30, velocity: 0.85),  // D5
+
+            // Long wailing G5 with vibrato
+            GuitarString(frequency: 783.99, startTime: 1.62, duration: 0.95, velocity: 0.80, vibrato: true), // G5 held
+
+            // Descending run: E5-D5-B4-G4
+            GuitarString(frequency: 659.26, startTime: 2.55, duration: 0.20, velocity: 0.80),  // E5
+            GuitarString(frequency: 587.33, startTime: 2.74, duration: 0.20, velocity: 0.80),  // D5
+            GuitarString(frequency: 493.88, startTime: 2.92, duration: 0.22, velocity: 0.80),  // B4
+            GuitarString(frequency: 392.00, startTime: 3.10, duration: 0.30, velocity: 0.85),  // G4
+
+            // Slide up a whole step: A4 -> B4
+            GuitarString(frequency: 440.00, startTime: 3.40, duration: 0.32, velocity: 0.85, slideTo: 493.88), // A4 -> B4
+
+            // Final G strum topped with a ringing D5
+            GuitarString(frequency: 196.00, startTime: 3.72, duration: 0.85, velocity: 0.90),  // G3
+            GuitarString(frequency: 246.94, startTime: 3.74, duration: 0.85, velocity: 0.90),  // B3
+            GuitarString(frequency: 293.66, startTime: 3.76, duration: 0.85, velocity: 0.90),  // D4
+            GuitarString(frequency: 392.00, startTime: 3.78, duration: 0.85, velocity: 0.85),  // G4
+            GuitarString(frequency: 587.33, startTime: 3.90, duration: 0.65, velocity: 0.85, vibrato: true), // D5
+        ]
     }
 
     /// Renders every plucked string into one normalized PCM buffer.
