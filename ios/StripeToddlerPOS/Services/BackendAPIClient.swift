@@ -311,6 +311,20 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         }
     }
 
+    /// Minimal line item sent with a capture request — only what the worker's
+    /// transaction log stores (D1: barcode, name, price_cents, quantity).
+    /// Notably EXCLUDES the product photo: POSInventoryItem.imageUrl is often a
+    /// multi-hundred-KB base64 data URI, which would bloat every capture upload.
+    /// Also INCLUDES `quantity`, which the worker requires — a full
+    /// POSInventoryItem payload (no quantity field) was rejected with
+    /// "Malformed JSON payload" (400), silently killing captures.
+    private struct CaptureLineItem: Encodable {
+        let barcode: String
+        let name: String
+        let priceCents: Int
+        let quantity: Int
+    }
+
     public func captureTransaction(paymentIntentId: String, totalCents: Int, items: [POSInventoryItem]) async throws -> CaptureResponse {
         let url = baseURL.appendingPathComponent("api/terminal/capture")
         var request = URLRequest(url: url)
@@ -320,10 +334,16 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
         struct RequestBody: Encodable {
             let paymentIntentId: String
             let totalCents: Int
-            let items: [POSInventoryItem]
+            let items: [CaptureLineItem]
         }
 
-        let body = RequestBody(paymentIntentId: paymentIntentId, totalCents: totalCents, items: items)
+        let body = RequestBody(
+            paymentIntentId: paymentIntentId,
+            totalCents: totalCents,
+            items: items.map {
+                CaptureLineItem(barcode: $0.barcode, name: $0.name, priceCents: $0.priceCents, quantity: 1)
+            }
+        )
         let bodyData = try jsonEncoder.encode(body)
         request.httpBody = bodyData
 
