@@ -28,8 +28,8 @@ struct CartView: View {
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.toddlerTextSecondary)
                     
-                    Button(action: { onAddTestItem("TOY001") }) {
-                        Label("+ Fire Truck", systemImage: "plus.circle.fill")
+                    Button(action: { onAddTestItem("TOY-TUNA-FISH-001") }) {
+                        Label("+ Tuna Fish", systemImage: "plus.circle.fill")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
@@ -39,8 +39,8 @@ struct CartView: View {
                     }
                     .buttonStyle(ToddlerButtonStyle())
                     
-                    Button(action: { onAddTestItem("TOY002") }) {
-                        Label("+ Blocks", systemImage: "plus.circle.fill")
+                    Button(action: { onAddTestItem("TOY-ALPHABET-SOUP-001") }) {
+                        Label("+ Alphabet Soup", systemImage: "plus.circle.fill")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
@@ -50,8 +50,8 @@ struct CartView: View {
                     }
                     .buttonStyle(ToddlerButtonStyle())
                     
-                    Button(action: { onAddTestItem("TOY003") }) {
-                        Label("+ Teddy Bear", systemImage: "plus.circle.fill")
+                    Button(action: { onAddTestItem("TOY-SLICED-PEACHES-001") }) {
+                        Label("+ Sliced Peaches", systemImage: "plus.circle.fill")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
@@ -64,12 +64,12 @@ struct CartView: View {
                     Spacer()
                     
                     Button(action: {
-                        onAddTestItem("TOY001")
-                        onAddTestItem("TOY002")
-                        onAddTestItem("TOY003")
-                        onAddTestItem("TOY001")
+                        onAddTestItem("TOY-TUNA-FISH-001")
+                        onAddTestItem("TOY-ALPHABET-SOUP-001")
+                        onAddTestItem("TOY-CORN-001")
+                        onAddTestItem("TOY-GREEN-BEANS-001")
                     }) {
-                        Label("+ Add 4 Sample Toys", systemImage: "sparkles")
+                        Label("+ Add 4 Sample Items", systemImage: "sparkles")
                             .font(.system(size: 16, weight: .black, design: .rounded))
                             .padding(.horizontal, 18)
                             .padding(.vertical, 10)

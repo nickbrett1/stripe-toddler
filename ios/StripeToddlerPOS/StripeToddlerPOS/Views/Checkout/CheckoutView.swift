@@ -205,7 +205,7 @@ struct AdminSettingsView: View {
 
                 if viewModel.isTestModeEnabled {
                     Section(header: Text("Simulate Scan Input")) {
-                        TextField("Enter Barcode (e.g. TOY001)", text: $barcodeInput)
+                        TextField("Enter Barcode (e.g. TOY-TUNA-FISH-001)", text: $barcodeInput)
                             .keyboardType(.asciiCapable)
 
                         Button("Trigger Scan") {

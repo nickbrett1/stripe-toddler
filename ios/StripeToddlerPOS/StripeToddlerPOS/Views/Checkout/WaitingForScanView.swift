@@ -35,14 +35,14 @@ struct WaitingForScanView: View {
                 // Quick Test Barcode Tap Buttons (Only visible if Test Mode toggle is ON)
                 if showTestModeButtons, let onScanBarcode = onScanBarcode {
                     HStack(spacing: 24) {
-                        Button(action: { onScanBarcode("TOY001") }) {
+                        Button(action: { onScanBarcode("TOY-TUNA-FISH-001") }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "barcode")
                                     .font(.system(size: 26, weight: .bold))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Fire Truck ($5)")
+                                    Text("Tuna Fish ($10)")
                                         .font(.system(size: 20, weight: .black, design: .rounded))
-                                    Text("Barcode: TOY001")
+                                    Text("Barcode: TOY-TUNA-FISH-001")
                                         .font(.system(size: 13, weight: .bold, design: .rounded))
                                         .opacity(0.85)
                                 }
@@ -55,14 +55,14 @@ struct WaitingForScanView: View {
                             .shadow(color: Color.toddlerBlue.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         
-                        Button(action: { onScanBarcode("TOY002") }) {
+                        Button(action: { onScanBarcode("TOY-ALPHABET-SOUP-001") }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "barcode")
                                     .font(.system(size: 26, weight: .bold))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Blocks ($12.50)")
+                                    Text("Alphabet Soup ($8)")
                                         .font(.system(size: 20, weight: .black, design: .rounded))
-                                    Text("Barcode: TOY002")
+                                    Text("Barcode: TOY-ALPHABET-SOUP-001")
                                         .font(.system(size: 13, weight: .bold, design: .rounded))
                                         .opacity(0.85)
                                 }
@@ -75,14 +75,14 @@ struct WaitingForScanView: View {
                             .shadow(color: Color.toddlerGreen.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         
-                        Button(action: { onScanBarcode("TOY003") }) {
+                        Button(action: { onScanBarcode("TOY-SLICED-PEACHES-001") }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "barcode")
                                     .font(.system(size: 26, weight: .bold))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Teddy Bear ($8)")
+                                    Text("Sliced Peaches ($6)")
                                         .font(.system(size: 20, weight: .black, design: .rounded))
-                                    Text("Barcode: TOY003")
+                                    Text("Barcode: TOY-SLICED-PEACHES-001")
                                         .font(.system(size: 13, weight: .bold, design: .rounded))
                                         .opacity(0.85)
                                 }
