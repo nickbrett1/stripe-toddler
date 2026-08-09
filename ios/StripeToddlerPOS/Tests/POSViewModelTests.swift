@@ -53,6 +53,7 @@ final class MockStripeTerminalManager: StripeTerminalManagerProtocol {
     var connectCalled = false
     var disconnectCalled = false
     var collectPaymentCalled = false
+    var cancelPaymentCalled = false
     
     func connectToReader() {
         connectCalled = true
@@ -68,6 +69,11 @@ final class MockStripeTerminalManager: StripeTerminalManagerProtocol {
     
     func collectPayment(amount: Int, clientSecret: String) {
         collectPaymentCalled = true
+        delegate?.terminalManagerDidBeginCollectingPayment(self)
+    }
+    
+    func cancelPayment() {
+        cancelPaymentCalled = true
     }
     
     func simulatePaymentSuccess(paymentIntentId: String) {
@@ -209,6 +215,42 @@ final class POSViewModelTests: XCTestCase {
         await fulfillment(of: [expectation], timeout: 2.0)
     }
     
+    func testUnknownBarcodeShowsFriendlyItemNotFound() async {
+        let expectation = XCTestExpectation(description: "Unknown barcode shows item not found state")
+        
+        // A random/unrecognized barcode should surface the friendly item-not-found
+        // state, NOT the scary generic error state.
+        apiClient.fetchItemResult = .failure(BackendAPIError.badResponse(statusCode: 404))
+        viewModel.handleBarcodeScanned("RANDOM123")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            XCTAssertEqual(self.viewModel.state, .itemNotFound(barcode: "RANDOM123"))
+            expectation.fulfill()
+        }
+        
+        await fulfillment(of: [expectation], timeout: 1.0)
+    }
+    
+    func testRealFailureStillShowsErrorState() async {
+        let expectation = XCTestExpectation(description: "Non-404 failures still show error state")
+        
+        // A genuine backend failure (e.g. 500) must remain a real error,
+        // not be disguised as "item not found".
+        apiClient.fetchItemResult = .failure(BackendAPIError.badResponse(statusCode: 500))
+        viewModel.handleBarcodeScanned("TOY001")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard case .error = self.viewModel.state else {
+                XCTFail("State is not error")
+                expectation.fulfill()
+                return
+            }
+            expectation.fulfill()
+        }
+        
+        await fulfillment(of: [expectation], timeout: 1.0)
+    }
+    
     func testDismissErrorReturnsToCart() async {
         let expectation = XCTestExpectation(description: "Error dismissal returns to cart")
         
@@ -231,6 +273,52 @@ final class POSViewModelTests: XCTestCase {
             self.viewModel.dismissError()
             guard case .cartActive(let items, let totalCents) = self.viewModel.state else {
                 XCTFail("State is not cartActive after dismiss")
+                expectation.fulfill()
+                return
+            }
+            XCTAssertEqual(items.count, 1)
+            XCTAssertEqual(items.first?.barcode, "TOY001")
+            XCTAssertEqual(totalCents, 500)
+            expectation.fulfill()
+        }
+        
+        await fulfillment(of: [expectation], timeout: 2.0)
+    }
+    
+    func testScannerPreservesHyphenatedBarcode() {
+        // Regression: generated barcodes contain hyphens (e.g.
+        // "TOY-ALPHABET-SOUP-001"). The scanner sanitization must NOT strip
+        // them, or the app looks up "TOYALPHABETSOUP001" and surfaces
+        // "Item not found" even though the item exists in inventory.
+        XCTAssertEqual(
+            BarcodeScannerService.sanitizedBarcode("TOY-ALPHABET-SOUP-001"),
+            "TOY-ALPHABET-SOUP-001"
+        )
+        
+        // Plain alphanumeric codes are unaffected.
+        XCTAssertEqual(BarcodeScannerService.sanitizedBarcode("TOY001"), "TOY001")
+        XCTAssertEqual(BarcodeScannerService.sanitizedBarcode("036000291452"), "036000291452")
+        
+        // Control characters and whitespace are still stripped.
+        XCTAssertEqual(BarcodeScannerService.sanitizedBarcode("TOY\u{0}001 "), "TOY001")
+    }
+    
+    func testCancelCheckoutReturnsToCart() async {
+        let expectation = XCTestExpectation(description: "Cancel returns to basket")
+        
+        viewModel.handleBarcodeScanned("TOY001")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.viewModel.startCheckout()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            // Cancel the sync — should return to the basket, not the landing page.
+            self.viewModel.cancelCheckout()
+            
+            XCTAssertTrue(self.terminalManager.cancelPaymentCalled)
+            guard case .cartActive(let items, let totalCents) = self.viewModel.state else {
+                XCTFail("State is not cartActive after cancel")
                 expectation.fulfill()
                 return
             }

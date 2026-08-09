@@ -100,15 +100,25 @@ struct CheckoutView: View {
                 case .error:
                     WaitingForScanView()
                         .disabled(true)
+                    
+                case .itemNotFound:
+                    WaitingForScanView()
+                        .disabled(true)
                 }
             }
             .background(Color.toddlerBackground)
             
             // Payment Overlay
             if isCheckoutState(viewModel.state) {
-                PaymentPromptView(state: viewModel.state) {
-                    viewModel.resetPOS()
-                }
+                PaymentPromptView(
+                    state: viewModel.state,
+                    onCancel: {
+                        // Cancel returns to the basket with items intact, not the
+                        // landing page (which wipes the session).
+                        viewModel.cancelCheckout()
+                    },
+                    updateProgress: viewModel.readerUpdateProgress
+                )
                 .transition(.opacity)
             }
             
@@ -123,6 +133,15 @@ struct CheckoutView: View {
             // Error Overlay (Rule 9.1 / Phase 3 Step 3.10)
             if case .error(let message) = viewModel.state {
                 ErrorView(message: message) {
+                    // Return to the cart instead of wiping the session
+                    viewModel.dismissError()
+                }
+                .transition(.opacity)
+            }
+            
+            // Item-not-found overlay (friendly, non-alarming)
+            if case .itemNotFound(let barcode) = viewModel.state {
+                ItemNotFoundView(barcode: barcode) {
                     // Return to the cart instead of wiping the session
                     viewModel.dismissError()
                 }

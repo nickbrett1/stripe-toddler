@@ -49,8 +49,11 @@ struct StripeToddlerPOSApp: App {
 
     init() {
         let backendURL = URL(string: "https://stripe-toddler.nick-brett1.workers.dev")!
+        // Stripe Terminal Location ID — REQUIRED for the Reader M2 to connect.
+        // Stripe Dashboard → Terminal → Locations (e.g. "Home Studio").
+        let terminalLocationID = "tml_GnRLJAJEYgpkT7"
         let api = BackendAPIClient(baseURL: backendURL)
-        let terminal = StripeTerminalManager(apiClient: api)
+        let terminal = StripeTerminalManager(apiClient: api, locationId: terminalLocationID)
         _viewModel = StateObject(wrappedValue: POSViewModel(apiClient: api, terminalManager: terminal))
     }
 

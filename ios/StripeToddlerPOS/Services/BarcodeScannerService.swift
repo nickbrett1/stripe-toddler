@@ -61,20 +61,30 @@ public final class BarcodeScannerService: BarcodeScannerServiceProtocol {
             }
             buffer = ""
         } else {
-            // Strip control characters, only record alphanumeric scanner sweeps
-            let filteredCharacters = characters.filteringForBarcode()
+            // Strip control characters, but keep the full barcode payload
+            // (letters, numbers, and punctuation like the hyphens in generated
+            // codes, e.g. "TOY-ALPHABET-SOUP-001").
+            let filteredCharacters = BarcodeScannerService.sanitizedBarcode(characters)
             if !filteredCharacters.isEmpty {
                 buffer.append(filteredCharacters)
             }
         }
     }
-}
 
-// MARK: - String Filter Helper
-private extension String {
-    func filteringForBarcode() -> String {
-        // Barcode HID wedges output letters and numbers
-        let allowedCharacters = CharacterSet.alphanumerics
-        return String(self.unicodeScalars.filter { allowedCharacters.contains($0) })
+    /// Sanitizes a single key press's characters down to the characters that
+    /// can legitimately appear in a scanned barcode payload.
+    ///
+    /// Barcode HID wedges (keyboard emulation) transmit the full payload of the
+    /// code, which can include punctuation such as the hyphens in generated
+    /// codes like "TOY-ALPHABET-SOUP-001". Filtering to alphanumerics only used
+    /// to silently drop those hyphens, turning lookups into
+    /// "TOYALPHABETSOUP001" — which never matched the inventory key and
+    /// surfaced to the cashier as "Item not found: TOYALPHABETSOUP001".
+    /// Control characters, whitespace, and other stray key emissions are still
+    /// stripped.
+    static func sanitizedBarcode(_ raw: String) -> String {
+        var allowedCharacters = CharacterSet.alphanumerics
+        allowedCharacters.insert(charactersIn: "-")
+        return String(raw.unicodeScalars.filter { allowedCharacters.contains($0) })
     }
 }

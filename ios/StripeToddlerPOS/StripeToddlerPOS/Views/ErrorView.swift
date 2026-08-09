@@ -61,21 +61,31 @@ struct ErrorView: View {
         }
     }
     
+    /// True when the underlying message is genuinely about the reader not being
+    /// connected/found. We intentionally match on connection-specific hints so a
+    /// "reader" or "terminal" mention in an unrelated error (e.g. a backend
+    /// checkout failure) is NOT mislabeled as a reader-on instruction.
+    private var isReaderConnectionIssue: Bool {
+        let lowercased = message.lowercased()
+        let mentionsReader = lowercased.contains("reader") || lowercased.contains("terminal")
+        let connectionHints = ["connect", "disconnect", "not found", "no reader", "unavailable", "offline"]
+        return mentionsReader && connectionHints.contains { lowercased.contains($0) }
+    }
+
     private var formattedTitle: String {
-        if message.localizedCaseInsensitiveContains("terminal error") ||
-            message.localizedCaseInsensitiveContains("connecting") ||
-            message.localizedCaseInsensitiveContains("reader") {
-            return "Card Reader Not Found!"
+        if isReaderConnectionIssue {
+            return "Turn on your Stripe Reader M2"
         }
         let lines = message.components(separatedBy: "\n")
         return lines.first ?? message
     }
 
     private var formattedDetail: String {
-        if message.localizedCaseInsensitiveContains("terminal error") ||
-            message.localizedCaseInsensitiveContains("connecting") ||
-            message.localizedCaseInsensitiveContains("reader") {
-            return "Turn on your Stripe Reader M2, or enable Test Mode in Admin Settings (⚙️)"
+        if isReaderConnectionIssue {
+            // Show the underlying SDK error below the friendly instruction so the
+            // real cause (e.g. "reader is offline", "wrong location") is visible
+            // for troubleshooting instead of being swallowed.
+            return message
         }
         let lines = message.components(separatedBy: "\n")
         if lines.count > 1 {

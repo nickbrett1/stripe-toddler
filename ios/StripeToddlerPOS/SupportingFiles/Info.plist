@@ -24,6 +24,8 @@
 	<string>Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Stripe Toddler requires Bluetooth access to connect to Stripe Reader M2 for card payments.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Stripe Toddler needs your location to find and connect to the Stripe Reader M2 for card payments.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

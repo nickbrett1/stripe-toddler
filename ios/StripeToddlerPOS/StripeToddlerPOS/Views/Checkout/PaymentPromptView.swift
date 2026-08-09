@@ -3,6 +3,8 @@ import SwiftUI
 struct PaymentPromptView: View {
     let state: POSFlowState
     let onCancel: () -> Void
+    /// Non-nil while the reader installs a required software update.
+    var updateProgress: Float? = nil
     @State private var bounce = false
     
     var body: some View {
@@ -23,9 +25,24 @@ struct PaymentPromptView: View {
                             .opacity(bounce ? 0.5 : 1.0)
                             .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: bounce)
                         
-                        Text("Syncing Reader...")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.toddlerText)
+                        if let updateProgress {
+                            Text("Updating Reader...")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.toddlerText)
+                            
+                            ProgressView(value: updateProgress)
+                                .progressViewStyle(.linear)
+                                .frame(width: 240)
+                                .tint(.toddlerBlue)
+                            
+                            Text("\(updateProgress.isFinite ? Int(updateProgress * 100) : 0)%")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.toddlerBlue)
+                        } else {
+                            Text("Syncing Reader...")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.toddlerText)
+                        }
                     }
                     .onAppear { bounce = true }
                     

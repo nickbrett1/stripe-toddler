@@ -175,7 +175,7 @@ extensions:
     name: fintechnick
     enabled: true
     cmd: sh
-    args: ["-c", "npx -y mcp-remote https://www.fintechnick.com/api/mcp --header "Authorization: Bearer $FINTECHNICK_MCP""]
+    args: ["-c", "if [ -z \"$FINTECHNICK_MCP\" ]; then echo 'fintechnick MCP: ERROR FINTECHNICK_MCP is not set. Start goose via goose-dev, or run: export FINTECHNICK_MCP=$(doppler secrets get FINTECHNICK_MCP --project common --config dev --plain)' >&2; exit 1; fi; exec npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
     envs:
       FINTECHNICK_MCP: $FINTECHNICK_MCP
     timeout: 300
@@ -292,7 +292,7 @@ extensions:
     name: fintechnick
     enabled: true
     cmd: sh
-    args: ["-c", "npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
+    args: ["-c", "if [ -z \"$FINTECHNICK_MCP\" ]; then echo 'fintechnick MCP: ERROR FINTECHNICK_MCP is not set. Start goose via goose-dev, or run: export FINTECHNICK_MCP=$(doppler secrets get FINTECHNICK_MCP --project common --config dev --plain)' >&2; exit 1; fi; exec npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
     timeout: 300
 
   # Xcode via SSE proxy to remote Mac
@@ -304,29 +304,30 @@ extensions:
     args: ["/workspaces/stripe-toddler/.agents/mcp-sse-proxy.cjs", "http://mac-studio:9876/sse"]
     timeout: 300
 
-  # Doppler-aware MCP servers (inherit secrets from goose-dev wrapper)
+  # Doppler-backed MCP servers - explicitly pull tokens from Doppler (common/dev)
+  # so they also work with plain `goose`; fail fast with a clear message if not.
   sonarqube:
     type: stdio
     name: sonarqube
     enabled: true
-    cmd: doppler
-    args: ["run", "--", "npx", "-y", "sonarqube-mcp-server"]
+    cmd: sh
+    args: ["-c", "if ! doppler secrets get SONAR_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'sonarqube MCP: ERROR cannot fetch SONAR_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y sonarqube-mcp-server"]
     timeout: 300
 
   circleci:
     type: stdio
     name: circleci
     enabled: true
-    cmd: doppler
-    args: ["run", "--", "npx", "-y", "@circleci/mcp-server-circleci"]
+    cmd: sh
+    args: ["-c", "if ! doppler secrets get CIRCLECI_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'circleci MCP: ERROR cannot fetch CIRCLECI_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y @circleci/mcp-server-circleci"]
     timeout: 300
 
   github:
     type: stdio
     name: github
     enabled: true
-    cmd: doppler
-    args: ["run", "--", "npx", "-y", "@modelcontextprotocol/server-github"]
+    cmd: sh
+    args: ["-c", "if ! doppler secrets get GITHUB_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'github MCP: ERROR cannot fetch GITHUB_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y @modelcontextprotocol/server-github"]
     timeout: 300
 
   doppler:
@@ -334,7 +335,7 @@ extensions:
     name: doppler
     enabled: true
     cmd: sh
-    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain) npx -y @dopplerhq/mcp-server"]
+    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain 2>/dev/null || true); if [ -z \"$DOPPLER_TOKEN\" ]; then echo 'doppler MCP: ERROR doppler CLI is not authenticated. Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec env DOPPLER_TOKEN=$DOPPLER_TOKEN npx -y @dopplerhq/mcp-server"]
     timeout: 300
 GOOSE_EOF
 
@@ -343,6 +344,23 @@ GOOSE_EOF
 sudo chown "$CURRENT_USER:$CURRENT_USER" "$goose_config"
 
 echo "INFO: goose config.yaml generated at $goose_config"
+
+# --- Goose pre-flight wrapper -------------------------------------------------
+# Running plain `goose` skips the Doppler env injection that `goose-dev` provides,
+# which makes the LLM provider and several MCP servers fail cryptically. Install a
+# wrapper that runs scripts/goose-env-check.sh first and explains what's missing.
+echo "INFO: Installing goose pre-flight env-check wrapper..."
+GOOSE_BIN_DIR="$USER_HOME_DIR/.local/bin"
+mkdir -p "$GOOSE_BIN_DIR"
+if [ -f "$GOOSE_BIN_DIR/goose" ] && ! grep -qs "goose wrapper" "$GOOSE_BIN_DIR/goose"; then
+    echo "INFO: Moving real goose binary to $GOOSE_BIN_DIR/goose-bin"
+    mv "$GOOSE_BIN_DIR/goose" "$GOOSE_BIN_DIR/goose-bin"
+fi
+if [ -f "/workspaces/stripe-toddler/scripts/goose-env-check.sh" ]; then
+    install -m 0755 "/workspaces/stripe-toddler/scripts/goose-env-check.sh" "$GOOSE_BIN_DIR/goose-env-check.sh"
+fi
+install -m 0755 "/workspaces/stripe-toddler/scripts/goose-wrapper.sh" "$GOOSE_BIN_DIR/goose"
+echo "INFO: goose wrapper installed (real binary at $GOOSE_BIN_DIR/goose-bin)"
 
 echo -e "\nINFO: Custom container setup script finished."
 echo -e "\n⚠️  To complete cloud login, run:"
