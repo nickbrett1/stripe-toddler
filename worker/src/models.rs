@@ -114,6 +114,9 @@ pub struct CreatePaymentIntentResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CaptureTransactionRequest {
     pub payment_intent_id: String,
+    /// Accepted under both `amount_cents` (canonical) and `total_cents`
+    /// (legacy iOS client spelling) so stale clients don't 400.
+    #[serde(alias = "total_cents")]
     pub amount_cents: u32,
     pub items: Vec<LineItem>,
 }

@@ -333,13 +333,17 @@ public final class BackendAPIClient: BackendAPIClientProtocol {
 
         struct RequestBody: Encodable {
             let paymentIntentId: String
-            let totalCents: Int
+            // NOTE: the worker's CaptureTransactionRequest field is
+            // `amount_cents` — this must encode to `amount_cents`, NOT
+            // `total_cents`. The previous mismatch made the worker reject every
+            // capture with 400 "Malformed JSON payload".
+            let amountCents: Int
             let items: [CaptureLineItem]
         }
 
         let body = RequestBody(
             paymentIntentId: paymentIntentId,
-            totalCents: totalCents,
+            amountCents: totalCents,
             items: items.map {
                 CaptureLineItem(barcode: $0.barcode, name: $0.name, priceCents: $0.priceCents, quantity: 1)
             }
