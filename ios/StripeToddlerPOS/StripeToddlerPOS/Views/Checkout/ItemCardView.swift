@@ -90,6 +90,9 @@ struct ItemCardView_Previews: PreviewProvider {
 // MARK: - Diagnostic Remote Product Image View
 struct RemoteProductImageView: View {
     let item: POSInventoryItem
+    /// Height of the rendered hero photo. Defaults to the cart-tile size; larger
+    /// screens (e.g. the celebration carousel) pass a bigger value.
+    var imageHeight: CGFloat = 145
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading = true
     @State private var loadFailed = false
@@ -123,13 +126,13 @@ struct RemoteProductImageView: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 145)
+                    .frame(height: imageHeight)
                     .clipped()
             } else if isLoading {
                 RoundedRectangle(cornerRadius: ToddlerLayout.cornerRadiusCard + 4)
                     .fill(Color.toddlerSurfaceRaised)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 145)
+                    .frame(height: imageHeight)
                     .overlay(
                         VStack(spacing: 6) {
                             ProgressView()
@@ -144,7 +147,7 @@ struct RemoteProductImageView: View {
                 RoundedRectangle(cornerRadius: ToddlerLayout.cornerRadiusCard + 4)
                     .fill(fallbackColor.opacity(0.15))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 145)
+                    .frame(height: imageHeight)
                     .overlay(
                         VStack(spacing: 6) {
                             Image(systemName: fallbackSymbolName)
@@ -162,7 +165,7 @@ struct RemoteProductImageView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 145)
+        .frame(height: imageHeight)
         .task(id: item.imageUrl) {
             await fetchImageWithTrace()
         }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0103CAD63028A6E100152082 /* ToddlerSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0103CAD53028A6E100152082 /* ToddlerSound.swift */; };
 		0121DC863010479500EFE9D5 /* BarcodeScannerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121DC7F3010479500EFE9D5 /* BarcodeScannerService.swift */; };
 		0121DC873010479500EFE9D5 /* StripeTerminalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121DC803010479500EFE9D5 /* StripeTerminalManager.swift */; };
 		0121DC883010479500EFE9D5 /* POSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121DC843010479500EFE9D5 /* POSViewModel.swift */; };
@@ -30,6 +31,7 @@
 
 /* Begin PBXFileReference section */
 		0103C93F301997C600152082 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0103CAD53028A6E100152082 /* ToddlerSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToddlerSound.swift; sourceTree = "<group>"; };
 		0121DC6C300F902B00EFE9D5 /* StripeToddlerPOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StripeToddlerPOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0121DC7A3010479500EFE9D5 /* ToddlerDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToddlerDesignSystem.swift; sourceTree = "<group>"; };
 		0121DC7C3010479500EFE9D5 /* POSModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = POSModels.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 				0121DC7E3010479500EFE9D5 /* BackendAPIClient.swift */,
 				0121DC7F3010479500EFE9D5 /* BarcodeScannerService.swift */,
 				0121DC803010479500EFE9D5 /* StripeTerminalManager.swift */,
+				0103CAD53028A6E100152082 /* ToddlerSound.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -264,6 +267,7 @@
 			files = (
 				0121DC863010479500EFE9D5 /* BarcodeScannerService.swift in Sources */,
 				0121DC873010479500EFE9D5 /* StripeTerminalManager.swift in Sources */,
+				0103CAD63028A6E100152082 /* ToddlerSound.swift in Sources */,
 				0121DC883010479500EFE9D5 /* POSViewModel.swift in Sources */,
 				0121DC893010479500EFE9D5 /* BackendAPIClient.swift in Sources */,
 				0121DC8A3010479500EFE9D5 /* ToddlerDesignSystem.swift in Sources */,

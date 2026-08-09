@@ -9,6 +9,10 @@ struct CartView: View {
     let onCheckout: () -> Void
     let onReset: () -> Void
     
+    /// Item count from the previous render — used to detect that a new item was
+    /// scanned so we can auto-scroll it into view.
+    @State private var previousItemCount = 0
+    
     // YouTube Kids 2-column visual grid columns layout
     private let columns = [
         GridItem(.flexible(), spacing: ToddlerLayout.gridUnit * 4),
@@ -85,18 +89,34 @@ struct CartView: View {
             // toddlers without relying on words.
             KeepScanningBanner()
 
-            // YouTube Kids-style 2-column visual grid of large item tiles
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: ToddlerLayout.gridUnit * 4) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                        ItemCardView(item: item) {
-                            onRemoveItem(index)
+            // YouTube Kids-style 2-column visual grid of large item tiles.
+            // ScrollViewReader enables auto-scrolling so the most recently
+            // scanned item is always brought into view.
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: ToddlerLayout.gridUnit * 4) {
+                        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                            ItemCardView(item: item) {
+                                onRemoveItem(index)
+                            }
+                            .id(index)
                         }
                     }
+                    .padding(.horizontal, ToddlerLayout.gridUnit * 4)
+                    .padding(.top, ToddlerLayout.gridUnit * 4)
+                    .padding(.bottom, ToddlerLayout.gridUnit * 4)
                 }
-                .padding(.horizontal, ToddlerLayout.gridUnit * 4)
-                .padding(.top, ToddlerLayout.gridUnit * 4)
-                .padding(.bottom, ToddlerLayout.gridUnit * 4)
+                .onChange(of: items.count) { newCount in
+                    // Scanning appends the new item to the end of the grid —
+                    // scroll it into view instead of leaving it below the fold.
+                    // (Single-parameter onChange keeps iOS 16 compatibility.)
+                    if newCount > previousItemCount {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            proxy.scrollTo(newCount - 1, anchor: .bottom)
+                        }
+                    }
+                    previousItemCount = newCount
+                }
             }
             
             // Bottom Action Bar: Streamlined 90pt height containing Pay and Reset CTAs

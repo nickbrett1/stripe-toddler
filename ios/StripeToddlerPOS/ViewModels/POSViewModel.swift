@@ -90,6 +90,9 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 cachedCartItems.append(newItem)
                 cachedCartTotal += newItem.priceCents
                 
+                // Cheerful confirmation chime when an item lands in the cart
+                ToddlerSound.playScan()
+                
                 state = .cartActive(items: cachedCartItems, totalCents: cachedCartTotal)
             } catch {
                 if isItemNotFoundError(error) {
@@ -331,6 +334,8 @@ public final class POSViewModel: ObservableObject, BarcodeScannerDelegate, Strip
                 cancelCheckoutWatchdog()
                 state = .celebrating(itemsSold: cachedCartItems)
                 ToddlerHaptic.playNotification(ToddlerHapticType.success)
+                // Victory arpeggio to celebrate the successful payment
+                ToddlerSound.playSuccess()
             } catch {
                 cancelCheckoutWatchdog()
                 state = .error(message: "Capture failed: \(error.localizedDescription)")
