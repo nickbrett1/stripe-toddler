@@ -148,19 +148,37 @@ struct CelebrationView: View {
 
     // MARK: - Page Dots
 
+    @ViewBuilder
     private var pageDots: some View {
+        // Cap the visible dots (7 + a "+N" badge) so the row can never grow
+        // unbounded: with 12+ items the uncapped row of dots is wider than the
+        // screen and shoves the celebration text off the right edge.
+        let visibleDotCount = min(itemsSold.count, 7)
+        let highlightedDot = min(selectedIndex, visibleDotCount - 1)
+
         HStack(spacing: ToddlerLayout.gridUnit * 2) {
-            ForEach(0..<itemsSold.count, id: \.self) { index in
+            ForEach(0..<visibleDotCount, id: \.self) { index in
                 Circle()
-                    .fill(index == selectedIndex ? Color.toddlerYellow : Color.white.opacity(0.35))
+                    .fill(index == highlightedDot ? Color.toddlerYellow : Color.white.opacity(0.35))
                     .frame(
-                        width: index == selectedIndex ? 22 : 14,
-                        height: index == selectedIndex ? 22 : 14
+                        width: index == highlightedDot ? 22 : 14,
+                        height: index == highlightedDot ? 22 : 14
                     )
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedIndex)
             }
+
+            // Overflow badge: still communicates "there are more toys coming"
+            // once the dot cap is reached, without overflowing the screen.
+            if itemsSold.count > visibleDotCount {
+                Text("+\(itemsSold.count - visibleDotCount)")
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white.opacity(0.85))
+                    .frame(width: 24, height: 24)
+            }
         }
+        .frame(maxWidth: .infinity) // never exceed the container width
         .frame(height: 24)
+        .clipped()
     }
 
     // MARK: - Fallback (empty basket — should not normally happen)
@@ -319,6 +337,27 @@ struct CelebrationItemCardView_Previews: PreviewProvider {
         )
         .padding()
         .background(Color.black.opacity(0.85))
+        .previewLayout(.sizeThatFits)
+    }
+}
+
+// MARK: - Large-basket preview (12+ items) to catch horizontal overflow
+struct CelebrationViewLargeBasket_Previews: PreviewProvider {
+    static var previews: some View {
+        CelebrationView(
+            itemsSold: (1...15).map { index in
+                POSInventoryItem(
+                    barcode: "TOY\(String(format: "%03d", index))",
+                    name: "Toy Item \(index)",
+                    // Invalid data URI fails fast so the preview renders quickly
+                    // with fallback tiles instead of waiting on network images.
+                    priceCents: 500 + index * 100,
+                    imageUrl: URL(string: "data:image/jpeg;base64,AAAA")!
+                )
+            },
+            onDismiss: {}
+        )
+        .frame(width: 390, height: 844)
         .previewLayout(.sizeThatFits)
     }
 }
