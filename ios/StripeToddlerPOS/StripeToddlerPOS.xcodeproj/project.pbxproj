@@ -565,7 +565,7 @@
 			repositoryURL = "https://github.com/stripe/stripe-terminal-ios";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 5.7.0;
+				minimumVersion = 5.8.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
