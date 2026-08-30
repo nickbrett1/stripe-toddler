@@ -117,7 +117,16 @@ echo "🚀 Syncing secrets to Cloudflare ($ENV_DISPLAY_NAME)..."
 SUCCESS=true
 while read -r batch; do
     echo "$batch" > doppler_secrets_batch_temp.json
-    npx wrangler versions secret bulk doppler_secrets_batch_temp.json $WRANGLER_ARGS || SUCCESS=false
+    if [ -n "$WRANGLER_ARGS" ]; then
+        npx wrangler versions secret bulk doppler_secrets_batch_temp.json $WRANGLER_ARGS || SUCCESS=false
+    else
+        # Primary Worker (no named environment). Wrangler v4+ reads the
+        # CLOUDFLARE_ENV environment variable (which CI sets to "default" for
+        # the main deploy) as the target environment. Without a [env.default]
+        # section in the config that would fail, so strip it from the wrangler
+        # subprocess to target the top-level/primary Worker.
+        env -u CLOUDFLARE_ENV npx wrangler versions secret bulk doppler_secrets_batch_temp.json || SUCCESS=false
+    fi
 done < doppler_secrets_batches.json
 
 if [ "$SUCCESS" = true ]; then
