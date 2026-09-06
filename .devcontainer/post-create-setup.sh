@@ -35,7 +35,6 @@ else
     sudo cp -f /etc/ssh/ssh_host_* /var/lib/tailscale/ssh/
 fi
 
-
 if [ -f "/workspaces/stripe-toddler/.devcontainer/.zshrc" ]; then
     echo "INFO: Copying .zshrc to $USER_HOME_DIR/.zshrc"
     cp "/workspaces/stripe-toddler/.devcontainer/.zshrc" "$USER_HOME_DIR/.zshrc"
@@ -100,18 +99,8 @@ else
     echo "INFO: /workspaces/stripe-toddler/.devcontainer/.tmux.conf not found, skipping copy."
 fi
 
-
-
-
-
-
 echo "INFO: Configuring git safe directory..."
 git config --global --add safe.directory /workspaces/stripe-toddler
-
-
-
-
-
 
 echo "INFO: Installing Antigravity CLI and Specify CLI..."
 if ! command -v npm &> /dev/null; then
@@ -133,69 +122,21 @@ curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/insta
 
 echo "INFO: Setting up goose configuration and MCP servers..."
 
-# Create goose config directory
-mkdir -p "$HOME/.config/goose"
-
-# Write goose config with MCP server extensions
-cat > "$HOME/.config/goose/config.yaml" << 'GOOSECFGEOF'
+CONFIG="$HOME/.config/goose/config.yaml"
+if [ -f "$CONFIG" ]; then
+    echo "INFO: Keeping existing $CONFIG (provider + extensions preserved)."
+else
+    echo "INFO: No goose config found - writing project goose config (extensions only; provider resolves from Doppler env at runtime)."
+    mkdir -p "$HOME/.config/goose"
+    cat > "$CONFIG" <<'GOOSECFGEOF'
 extensions:
-  # Built-in goose extensions
-  developer:
-    type: builtin
-    name: developer
-    enabled: true
-    bundled: true
-    timeout: 300
-  # Svelte MCP - Streamable HTTP
-  svelte:
+  mcphub-dev:
     type: streamable_http
-    name: svelte
+    name: mcphub-dev
     enabled: true
-    uri: "https://mcp.svelte.dev/mcp"
+    uri: http://nas:8781/mcp/dev
     timeout: 300
-  # Memos MCP
-  memos:
-    type: stdio
-    name: memos
-    enabled: true
-    cmd: node
-    args: [".agents/mcp-streamable-http-proxy.cjs", "http://nas:5230/mcp"]
-    timeout: 300
-  # Chrome DevTools MCP
-  chrome-devtools:
-    type: stdio
-    name: chrome-devtools
-    enabled: true
-    cmd: npx
-    args: ["-y", "chrome-devtools-mcp"]
-    timeout: 300
-  # Fintechnick MCP
-  fintechnick:
-    type: stdio
-    name: fintechnick
-    enabled: true
-    cmd: sh
-    args: ["-c", "if [ -z \"$FINTECHNICK_MCP\" ]; then echo 'fintechnick MCP: ERROR FINTECHNICK_MCP is not set. Start goose via goose-dev, or run: export FINTECHNICK_MCP=$(doppler secrets get FINTECHNICK_MCP --project common --config dev --plain)' >&2; exit 1; fi; exec npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
-    envs:
-      FINTECHNICK_MCP: $FINTECHNICK_MCP
-    timeout: 300
-  # GitHub MCP Server (via doppler for token)
-  github:
-    type: stdio
-    name: github
-    enabled: true
-    cmd: doppler
-    args: ["run", "--", "npx", "-y", "@modelcontextprotocol/server-github"]
-    timeout: 300
-  # Doppler MCP Server
-  doppler:
-    type: stdio
-    name: doppler
-    enabled: true
-    cmd: sh
-    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain) npx -y @dopplerhq/mcp-server"]
-    timeout: 300
-  # Optional MCP servers
+
   sonarqube:
     type: stdio
     name: sonarqube
@@ -203,17 +144,28 @@ extensions:
     cmd: doppler
     args: ["run", "--", "npx", "-y", "sonarqube-mcp-server"]
     timeout: 300
-  circleci:
-    type: stdio
-    name: circleci
+
+  svelte:
+    type: streamable_http
+    name: svelte
     enabled: true
-    cmd: doppler
-    args: ["run", "--", "npx", "-y", "@circleci/mcp-server-circleci"]
+    uri: https://mcp.svelte.dev/mcp
+    description: Svelte MCP server (remote)
     timeout: 300
 GOOSECFGEOF
+    echo "INFO: Wrote project goose config (MCPHub dev group + local/remote exceptions)."
+fi
+
+echo "INFO: Ensuring goose recipes are available (spec-first development process)..."
+RECIPES_DIR="$HOME/.config/goose/recipes"
+if [ -d "$RECIPES_DIR/.git" ]; then
+    (cd "$RECIPES_DIR" && git pull --ff-only --quiet)         || echo "WARN: Could not update goose-recipes (offline or conflict); keeping existing copy."
+else
+    mkdir -p "$HOME/.config/goose"
+    git clone --quiet https://github.com/nickbrett1/goose-recipes.git "$RECIPES_DIR"         || echo "WARN: Could not clone goose-recipes; recipes will be unavailable."
+fi
 
 echo "INFO: goose configuration complete."
-
 
 echo "INFO: Installing specdag globally..."
 npm install -g @japorto100/specdag
@@ -240,110 +192,6 @@ if [ -f "webapp/scripts/install-nanobanana.sh" ]; then
 elif [ -f "scripts/install-nanobanana.sh" ]; then
     bash scripts/install-nanobanana.sh
 fi
-
-echo "INFO: Generating goose configuration with MCP servers from .agents/mcp_config.json..."
-mkdir -p "$USER_HOME_DIR/.config/goose"
-
-# Build goose config.yaml with MCP servers from the project's agy MCP config
-goose_config="$USER_HOME_DIR/.config/goose/config.yaml"
-
-cat > "$goose_config" << 'GOOSE_EOF'
-# Goose configuration generated from project .agents/mcp_config.json
-# Managed by .devcontainer/post-create-setup.sh - do not edit manually
-
-# LLM Provider loaded from Doppler (goose project, prd config) via goose-dev alias
-active_provider: litellm
-providers:
-  litellm:
-    enabled: true
-    model: deepseek-v4-flash
-    configured: true
-GOOSE_TELEMETRY_ENABLED: true
-GOOSE_MODE: auto
-
-extensions:
-  # Built-in extensions
-  developer:
-    type: builtin
-    name: developer
-    enabled: true
-    bundled: true
-    timeout: 300
-
-  # Remote MCP servers (streamable HTTP)
-  svelte:
-    type: streamable_http
-    name: svelte
-    enabled: true
-    uri: "https://mcp.svelte.dev/mcp"
-    timeout: 300
-
-  # Local MCP servers (stdio)
-  chrome-devtools:
-    type: stdio
-    name: chrome-devtools
-    enabled: true
-    cmd: npx
-    args: ["-y", "chrome-devtools-mcp"]
-    timeout: 300
-
-  fintechnick:
-    type: stdio
-    name: fintechnick
-    enabled: true
-    cmd: sh
-    args: ["-c", "if [ -z \"$FINTECHNICK_MCP\" ]; then echo 'fintechnick MCP: ERROR FINTECHNICK_MCP is not set. Start goose via goose-dev, or run: export FINTECHNICK_MCP=$(doppler secrets get FINTECHNICK_MCP --project common --config dev --plain)' >&2; exit 1; fi; exec npx -y mcp-remote https://www.fintechnick.com/api/mcp --header \"Authorization: Bearer $FINTECHNICK_MCP\""]
-    timeout: 300
-
-  # Xcode via SSE proxy to remote Mac
-  xcode-native:
-    type: stdio
-    name: xcode-native
-    enabled: true
-    cmd: node
-    args: ["/workspaces/stripe-toddler/.agents/mcp-sse-proxy.cjs", "http://mac-studio:9876/sse"]
-    timeout: 300
-
-  # Doppler-backed MCP servers - explicitly pull tokens from Doppler (common/dev)
-  # so they also work with plain `goose`; fail fast with a clear message if not.
-  sonarqube:
-    type: stdio
-    name: sonarqube
-    enabled: true
-    cmd: sh
-    args: ["-c", "if ! doppler secrets get SONAR_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'sonarqube MCP: ERROR cannot fetch SONAR_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y sonarqube-mcp-server"]
-    timeout: 300
-
-  circleci:
-    type: stdio
-    name: circleci
-    enabled: true
-    cmd: sh
-    args: ["-c", "if ! doppler secrets get CIRCLECI_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'circleci MCP: ERROR cannot fetch CIRCLECI_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y @circleci/mcp-server-circleci"]
-    timeout: 300
-
-  github:
-    type: stdio
-    name: github
-    enabled: true
-    cmd: sh
-    args: ["-c", "if ! doppler secrets get GITHUB_TOKEN --project common --config dev --plain >/dev/null 2>&1; then echo 'github MCP: ERROR cannot fetch GITHUB_TOKEN from Doppler (common/dev). Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec doppler run --project common --config dev -- npx -y @modelcontextprotocol/server-github"]
-    timeout: 300
-
-  doppler:
-    type: stdio
-    name: doppler
-    enabled: true
-    cmd: sh
-    args: ["-c", "DOPPLER_TOKEN=$(doppler configure get token --plain 2>/dev/null || true); if [ -z \"$DOPPLER_TOKEN\" ]; then echo 'doppler MCP: ERROR doppler CLI is not authenticated. Run: doppler login, or start goose via goose-dev.' >&2; exit 1; fi; exec env DOPPLER_TOKEN=$DOPPLER_TOKEN npx -y @dopplerhq/mcp-server"]
-    timeout: 300
-GOOSE_EOF
-
-# Replace $FINTECHNICK_MCP in the config with the actual env var syntax for goose
-# (Goose envs should be literal, the sh -c will resolve them at runtime)
-sudo chown "$CURRENT_USER:$CURRENT_USER" "$goose_config"
-
-echo "INFO: goose config.yaml generated at $goose_config"
 
 # --- Goose pre-flight wrapper -------------------------------------------------
 # Running plain `goose` skips the Doppler env injection that `goose-dev` provides,
