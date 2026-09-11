@@ -21,7 +21,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "wrangler": "^4.120.1",
+    "wrangler": "^4.131.0",
     "simple-git-hooks": "^2.11.1",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
