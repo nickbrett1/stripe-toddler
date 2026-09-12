@@ -1,6 +1,6 @@
 # Stripe Toddler
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/nickbrett1/stripe-toddler/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/nickbrett1/stripe-toddler/tree/main)
+[![Buildkite](https://badge.buildkite.com/815821e97c0d1c5daf0f6c3472e2fa4f5ae87e4d61ae4267af.svg?branch=main)](https://buildkite.com/nick-brett/stripe-toddler)
 
 A simple, fun, and colorful point-of-sale system designed for a 3-year-old toddler, built to explore and learn about Stripe's APIs and services.
 
@@ -51,7 +51,7 @@ The backend powers an admin interface (hosted on fintechnick.com) that enables:
 This repository is configured with various tools to maintain code quality, security, and smooth CI/CD pipelines:
 
 - DevContainers (Rust)
-- CircleCI
+- Buildkite (CI/CD)
 - Doppler (Secrets Management)
 - Cloudflare Wrangler
 - Dependabot
