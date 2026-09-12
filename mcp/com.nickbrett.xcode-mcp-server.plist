@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- LaunchAgent that keeps the Xcode MCP HTTP<->stdio bridge running.
+         Extracted from the host Mac that runs the dev container.
+         Adjust the node path, script path and log paths for other machines. -->
+    <key>Label</key>
+    <string>com.nickbrett.xcode-mcp-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/usr/local/bin/xcode-mcp-server.js</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PORT</key>
+        <string>9876</string>
+        <!-- Needed so `xcrun mcpbridge` and node resolve from launchd's
+             minimal environment. -->
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/nick</string>
+
+    <!-- Start as soon as the agent is loaded at login. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart whenever the process exits (crash, kill, etc.). launchd
+         throttles restarts to a 10s minimum, so this cannot spin. -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/nick/Library/Logs/xcode-mcp-server.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/nick/Library/Logs/xcode-mcp-server.err.log</string>
+</dict>
+</plist>
