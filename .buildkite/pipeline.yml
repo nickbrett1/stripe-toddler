@@ -78,6 +78,15 @@ steps:
         export CLOUDFLARE_API_TOKEN="$$(doppler secrets get CLOUDFLARE_API_TOKEN --project common --config dev --plain)"
         export CLOUDFLARE_ACCOUNT_ID="$$(doppler secrets get CLOUDFLARE_ACCOUNT_ID --project common --config dev --plain)"
       - ./scripts/setup-wrangler-config.sh "dev"
-      - (cd worker && cargo build --release)
+      - |
+        # A Rust worker is built by cargo. Rust is installed into the container
+        # per run rather than baked into the image - rustup is about a gigabyte,
+        # and the image is shared with the build step, so the cost lands on
+        # deploy time instead of on every job.
+        if ! command -v cargo >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          . "$$HOME/.cargo/env"
+        fi
+        (cd worker && cargo build --release)
       - (cd worker && npx --yes wrangler deploy)
       - ./scripts/sync-doppler-secrets.sh --project common --config dev --env default
