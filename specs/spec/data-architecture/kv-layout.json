@@ -38,7 +38,7 @@
               "image_url": {
                 "type": "string",
                 "format": "uri",
-                "description": "Public URL pointing to R2-hosted photo asset."
+                "description": "Image reference for the item: an inline data:image/...;base64, URI (the common case) or an https URL. Stored with the item, not in a separate object store."
               },
               "created_at": {
                 "type": "integer",

@@ -203,24 +203,12 @@ wrangler kv:namespace create STRIPE_TODDLER_INVENTORY
 
 ---
 
-### Step 1.5 — Create Cloudflare R2 Bucket **[AGENT]**
+### Step 1.5 — (Removed) Cloudflare R2 Bucket **[AGENT]**
 
-**Action**: Create the R2 bucket for inventory item photos.
-
-**Tool**: `run_command`
-
-```bash
-wrangler r2 bucket create stripe-toddler-images
-```
-
-**Post-action**: Add R2 binding to `worker/wrangler.toml`:
-```toml
-[[r2_buckets]]
-binding = "IMAGES"
-bucket_name = "stripe-toddler-images"
-```
-
-**Success**: `wrangler r2 bucket list` shows `stripe-toddler-images`.
+**Status**: Dropped. Inventory photos are stored inline in the KV item record as
+a `data:image/...;base64,` URI (the `image_url` field), not in a separate object
+store. There is no R2 bucket and no `[[r2_buckets]]` binding — see
+`capacity/load-model.md` §2.2.
 
 ---
 
@@ -407,7 +395,6 @@ Implements `job.payments-backend`. All steps run inside the devcontainer unless 
 | POST | `/api/terminal/capture` | `handle_capture_transaction` | AppAttest |
 | GET | `/api/admin/inventory` | `handle_admin_list_inventory` | AdminApiKey |
 | POST | `/api/admin/inventory` | `handle_admin_update_inventory` | AdminApiKey |
-| POST | `/api/admin/inventory/upload` | `handle_admin_upload_image` | AdminApiKey |
 | GET | `/api/admin/analytics` | `handle_admin_analytics` | AdminApiKey |
 
 **Success**: `cargo build --target wasm32-unknown-unknown` compiles. `wrangler dev` starts and responds to requests (with 501).
@@ -561,36 +548,24 @@ Implements `job.payments-backend`. All steps run inside the devcontainer unless 
 
 ---
 
-### Step 2.10 — Admin Image Upload Endpoint (R2) **[AGENT]**
+### Step 2.10 — Admin Image Handling (KV-Embedded, No Upload Endpoint) **[AGENT]**
 
-**Action**: Implement `POST /api/admin/inventory/upload`.
+**Action**: No dedicated image-upload endpoint. A photo reaches the backend as
+part of the inventory item itself: the admin UI encodes it as a
+`data:image/...;base64,` URI and sends it as the `image_url` field of the
+`POST /api/admin/inventory` payload.
 
-**Tool**: `write_to_file` — `worker/src/handlers/admin.rs`
+**Tool**: none — handled by `handle_admin_update_inventory`
 
 **Logic**:
-1. Parse multipart form data: extract `barcode` (string field) and `image` (binary file).
-2. Validate image size ≤ 5 MB. Return 413 if exceeded.
-3. Determine content type from the file header (JPEG or PNG).
-4. Compute R2 object key: `images/<barcode>.jpg` (or `.png`).
-5. Put the image bytes into the R2 `IMAGES` binding: `bucket.put(key, image_bytes)`.
-6. Construct the public URL: `https://stripe-toddler-images.<account>.r2.dev/images/<barcode>.jpg`.
-7. Return `ImageUploadResponse { image_url, barcode }`.
+1. The `image_url` string is stored verbatim with the item in `STRIPE_TODDLER_INVENTORY` under `item:<barcode>`.
+2. Size limits are Cloudflare KV's per-value ceiling (25 MiB), not a separate upload endpoint's 5 MB multipart limit.
 
-**Success**: Uploading a test image via curl returns a valid R2 URL. Fetching that URL returns the image.
+**Success**: Creating an inventory item with a base64 `image_url` returns it unchanged from `GET /api/admin/inventory`, and the POS renders the photo.
 
-```bash
-curl -X POST http://localhost:8787/api/admin/inventory/upload \
-  -H "X-Admin-API-Key: $ADMIN_API_KEY" \
-  -F "barcode=TEST001" \
-  -F "image=@/path/to/test-photo.jpg"
-```
+**Ref**: `worker-openapi.yaml` (`InventoryItem.image_url`), `capacity/load-model.md` §2.2
 
-**Ref**: `worker-openapi.yaml` (`uploadInventoryImage`), `domain-models.rs` (`ImageUploadResponse`)
-
-**Expectation**: `expectation.inventory-success` ("photos stored in R2")
-
-> [!NOTE]
-> R2 public access must be enabled on the bucket for the returned URL to be publicly accessible. This can be done via `wrangler r2 bucket update stripe-toddler-images --public-access allow` or in the Cloudflare Dashboard under the R2 bucket settings.
+**Expectation**: `expectation.inventory-success` ("photos stored with the item in KV")
 
 ---
 

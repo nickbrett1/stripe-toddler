@@ -43,7 +43,7 @@ nodes:
     owner: "nickbrett1"
   - id: expectation.inventory-success
     type: expectation
-    title: "Catalog is updated at edge, photos stored in R2, and filtered labels print successfully"
+    title: "Catalog is updated at edge, photos stored with the item in KV, and filtered labels print successfully"
     owner: "nickbrett1"
   - id: expectation.analytics-api-success
     type: expectation

@@ -19,18 +19,16 @@ The target audience for this application is a single 3-year-old toddler. This re
 ## 2. Storage Sizing & Data Footprint
 
 ### 2.1 Cloudflare KV (Inventory Catalog)
-*   **Record Size**: ~250 bytes per inventory metadata object (barcode string, item name, price integer, R2 image URL link).
+*   **Record Size**: ~340 KB per inventory object — the item metadata (barcode string, name, price integer, timestamp) plus the photo encoded inline as a `data:image/...;base64,` URI. The image dominates the record: a ~250 KB JPEG inflates to ~333 KB once base64-encoded.
 *   **Device Attestation Key Size**: ~300 bytes per registered key.
 *   **Inventory Capacity Calculation**:
-    $$\text{100 items} \times 250\text{ bytes} \approx 25\text{ KB}$$
+    $$\text{100 items} \times 340\text{ KB} \approx 34\text{ MB}$$
     $$\text{5 devices} \times 300\text{ bytes} \approx 1.5\text{ KB}$$
-*   **Total KV Storage**: < 100 KB (extremely negligible, well within Cloudflare KV's free tier of 1 GB).
+*   **Total KV Storage**: < 35 MB (well within Cloudflare KV's free tier of 1 GB).
 
-### 2.2 Cloudflare R2 (Toy Photos)
-*   **File Size**: ~500 KB per compressed photo.
-*   **Total Photo Storage**:
-    $$\text{100 toys} \times 500\text{ KB} \approx 50\text{ MB}$$
-*   **Total R2 Storage**: < 100 MB (well within Cloudflare R2's free tier of 10 GB).
+### 2.2 Photo Storage
+*   Photos are **not** kept in a separate object store. Each photo is embedded in its KV item record as a base64 `data:` URI (the `image_url` field in §2.1), so there is no Cloudflare R2 bucket and no separate storage footprint to size.
+*   **Per-value ceiling**: Cloudflare KV caps a single value at 25 MiB. Because base64 inflates by ~33%, one photo must stay under roughly 18 MB to fit alongside its metadata. Toy photos are ~250 KB, so this is not a practical constraint.
 
 ### 2.3 Cloudflare D1 Relational DB (Sales Analytics)
 *   **Transaction Table Row Size**: ~150 bytes (UUID, Payment Intent, Amount, Status, Timestamp).
