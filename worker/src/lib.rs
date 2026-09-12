@@ -456,62 +456,6 @@ pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
             json_response(&serde_json::json!({ "status": "success", "barcode": barcode, "deleted": true }))
         })
-        .post_async("/api/admin/inventory/upload", |mut req, ctx| async move {
-            if !validate_admin_auth(&req, &ctx.env)? {
-                return error_response("Unauthorized: Invalid Admin API Key", 401);
-            }
-
-            let form = match req.form_data().await {
-                Ok(f) => f,
-                Err(_) => return error_response("Malformed Multipart Form Payload", 400),
-            };
-
-            let barcode = match form.get("barcode") {
-                Some(FormEntry::Field(s)) => s,
-                _ => return error_response("Missing barcode field", 400),
-            };
-
-            let file = match form.get("image") {
-                Some(FormEntry::File(f)) => f,
-                _ => return error_response("Missing image file field", 400),
-            };
-
-            let bytes = match file.bytes().await {
-                Ok(b) => b,
-                Err(_) => return error_response("Failed to read image bytes", 400),
-            };
-
-            if bytes.len() > 5 * 1024 * 1024 {
-                return error_response("Image file exceeds the 5 MB size limit", 413);
-            }
-
-            let bucket = match ctx.env.bucket("IMAGES") {
-                Ok(b) => b,
-                Err(e) => return error_response(&format!("R2 Bucket Binding Error: {:?}", e), 500),
-            };
-
-            let ext = match file.type_().as_str() {
-                "image/png" => "png",
-                _ => "jpg",
-            };
-
-            let key = format!("images/{}.{}", barcode, ext);
-            if let Err(e) = bucket.put(&key, bytes).execute().await {
-                return error_response(&format!("R2 Upload Failed: {:?}", e), 500);
-            }
-
-            let account_id = match ctx.env.var("CLOUDFLARE_ACCOUNT_ID") {
-                Ok(a) => a.to_string(),
-                Err(_) => "default".to_string(),
-            };
-
-            let image_url = format!("https://stripe-toddler-images.{}.r2.dev/{}", account_id, key);
-            let resp = ImageUploadResponse {
-                image_url,
-                barcode,
-            };
-            json_response(&resp)
-        })
         .get_async("/api/admin/analytics", |req, ctx| async move {
             if !validate_admin_auth(&req, &ctx.env)? {
                 return error_response("Unauthorized: Invalid Admin API Key", 401);

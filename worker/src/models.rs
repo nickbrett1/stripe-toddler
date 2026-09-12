@@ -14,7 +14,8 @@ pub struct InventoryItem {
     pub name: String,
     /// Price in USD cents (e.g. 500 = $5).
     pub price_cents: u32,
-    /// Public URL pointing to R2-hosted image.
+    /// Image reference: an `https://` URL or an inline `data:image/...;base64,`
+    /// URI. Stored inline in the KV item record, not in a separate object store.
     pub image_url: String,
     /// Epoch unix timestamp of item creation.
     pub created_at: u64,
@@ -135,13 +136,4 @@ pub struct LineItem {
 pub struct CaptureTransactionResponse {
     pub status: String,
     pub transaction_id: String,
-}
-
-/// Response payload from inventory image upload to R2.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImageUploadResponse {
-    /// Public URL of the uploaded image on R2.
-    pub image_url: String,
-    /// The barcode the image was associated with.
-    pub barcode: String,
 }
